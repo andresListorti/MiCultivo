@@ -1,7 +1,10 @@
 {
   "version": 2,
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" }
+  ],
   "functions": {
-    "api/[...path].ts": {
+    "api/index.ts": {
       "includeFiles": "index.html"
     }
   }
