@@ -1,0 +1,27 @@
+{
+  "name": "mi-cultivo-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "App personal de seguimiento de cultivo — Express + TypeScript + Firestore + Firebase Auth, deploy en Vercel",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel deploy --prod",
+    "build": "tsc -p tsconfig.json --noEmit",
+    "create-users": "tsx scripts/createUsers.ts",
+    "seed": "tsx scripts/seed.ts"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "firebase-admin": "^12.6.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17",
+    "@types/node": "^22.7.4",
+    "@vercel/node": "^3.2.24",
+    "typescript": "^5.6.2",
+    "tsx": "^4.19.1"
+  }
+}

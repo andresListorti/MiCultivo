@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.vercel/
+*.log
+
+# Credenciales — NUNCA se suben al repo
+firebase-service-account.json
+.env
+.env.*
+credenciales-generadas.txt

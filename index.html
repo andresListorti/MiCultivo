@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mi Cultivo</title>
+<meta name="theme-color" content="#14532d">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          cultivo: {
+            50: '#f2fbf4', 100: '#e1f7e6', 200: '#c5eed0', 300: '#86efac', 400: '#4ade80',
+            500: '#22c55e', 600: '#16a34a', 700: '#15803d', 800: '#166534', 900: '#14532d', 950: '#052e16',
+          }
+        }
+      }
+    }
+  }
+</script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+  body { font-family: 'Inter', sans-serif; }
+  .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body class="bg-slate-100 text-slate-800 dark:bg-slate-950 dark:text-slate-100 antialiased transition-colors min-h-screen">
+
+  <!-- LOGIN — Firebase Auth real (email/password), 2 cuentas: Nacho y Pochi -->
+  <section id="view-login" class="min-h-screen flex items-center justify-center p-5 bg-gradient-to-b from-cultivo-900 to-slate-950">
+    <div class="w-full max-w-sm">
+      <div class="flex flex-col items-center gap-3 mb-8 text-white">
+        <div class="w-16 h-16 rounded-2xl bg-cultivo-600 flex items-center justify-center shadow-lg shadow-cultivo-950/50">
+          <i class="fa-solid fa-cannabis text-3xl"></i>
+        </div>
+        <div class="text-center">
+          <h1 class="text-xl font-bold tracking-tight">Mi Cultivo</h1>
+          <p class="text-xs text-cultivo-200">Seguimiento personal de cultivo</p>
+        </div>
+      </div>
+
+      <form id="login-form" class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-6 space-y-4">
+        <div>
+          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Email</label>
+          <div class="mt-1 flex items-center gap-2 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2.5 focus-within:ring-2 focus-within:ring-cultivo-500 bg-white dark:bg-slate-800">
+            <i class="fa-regular fa-envelope text-slate-400 text-sm"></i>
+            <input id="login-email" type="email" required placeholder="tu@email.com" class="w-full bg-transparent text-sm outline-none placeholder:text-slate-400">
+          </div>
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Contraseña</label>
+          <div class="mt-1 flex items-center gap-2 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2.5 focus-within:ring-2 focus-within:ring-cultivo-500 bg-white dark:bg-slate-800">
+            <i class="fa-solid fa-lock text-slate-400 text-sm"></i>
+            <input id="login-password" type="password" required placeholder="••••••••" class="w-full bg-transparent text-sm outline-none placeholder:text-slate-400">
+          </div>
+        </div>
+        <p id="login-error" hidden class="text-xs text-red-600 dark:text-red-400"></p>
+        <button type="submit" id="login-submit" class="w-full bg-cultivo-600 hover:bg-cultivo-700 text-white font-semibold text-sm py-2.5 rounded-lg shadow transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+          <i class="fa-solid fa-right-to-bracket"></i> Ingresar
+        </button>
+        <p class="text-[11px] text-center text-slate-400 dark:text-slate-500">Acceso privado · Firebase Auth</p>
+      </form>
+    </div>
+  </section>
+
+  <!-- APP SHELL -->
+  <div id="app-shell" hidden class="min-h-screen flex flex-col">
+    <header class="bg-cultivo-900 text-white shadow-md sticky top-0 z-30 border-b border-cultivo-700">
+      <div class="max-w-3xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-1.5 min-w-0">
+          <button type="button" id="btn-back" hidden class="w-8 h-8 shrink-0 rounded-lg hover:bg-cultivo-800 flex items-center justify-center transition-colors">
+            <i class="fa-solid fa-arrow-left"></i>
+          </button>
+          <button type="button" id="btn-logo-home" title="Ir al inicio" class="flex items-center gap-2.5 min-w-0 group">
+            <div class="w-8 h-8 shrink-0 rounded-lg bg-cultivo-600 flex items-center justify-center group-hover:bg-cultivo-500 transition-colors">
+              <i class="fa-solid fa-seedling text-sm"></i>
+            </div>
+            <h1 id="header-title" class="text-sm font-bold tracking-tight truncate">Mi Cultivo</h1>
+          </button>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <span id="header-user" class="text-[10px] text-cultivo-200 hidden sm:inline"></span>
+          <button type="button" id="btn-dark-toggle" title="Modo oscuro" class="w-8 h-8 rounded-lg hover:bg-cultivo-800 flex items-center justify-center transition-colors">
+            <i id="dark-toggle-icon" class="fa-solid fa-moon text-sm"></i>
+          </button>
+          <button type="button" id="btn-logout" title="Cerrar sesión" class="w-8 h-8 rounded-lg hover:bg-cultivo-800 flex items-center justify-center transition-colors">
+            <i class="fa-solid fa-power-off text-sm"></i>
+          </button>
+        </div>
+      </div>
+      <nav class="border-t border-cultivo-800/60">
+        <div class="max-w-3xl mx-auto grid grid-cols-4">
+          <button type="button" data-nav="dashboard" class="nav-btn flex flex-col items-center gap-1 py-2 text-white border-b-2 border-white">
+            <i class="fa-solid fa-house text-sm"></i><span class="text-[10px] font-semibold">Inicio</span>
+          </button>
+          <button type="button" data-nav="watering" class="nav-btn flex flex-col items-center gap-1 py-2 text-cultivo-200/70 border-b-2 border-transparent">
+            <i class="fa-solid fa-droplet text-sm"></i><span class="text-[10px] font-semibold">Riego</span>
+          </button>
+          <button type="button" data-nav="harvest" class="nav-btn flex flex-col items-center gap-1 py-2 text-cultivo-200/70 border-b-2 border-transparent">
+            <i class="fa-solid fa-scissors text-sm"></i><span class="text-[10px] font-semibold">Cosecha</span>
+          </button>
+          <button type="button" data-nav="photos" class="nav-btn flex flex-col items-center gap-1 py-2 text-cultivo-200/70 border-b-2 border-transparent">
+            <i class="fa-solid fa-camera text-sm"></i><span class="text-[10px] font-semibold">Fotos</span>
+          </button>
+        </div>
+      </nav>
+    </header>
+
+    <main class="flex-1 max-w-3xl w-full mx-auto p-4 flex flex-col gap-4">
+
+      <!-- DASHBOARD — agrupado por carpa; el ambiente (temp/humedad) vive en cada carpa -->
+      <section id="view-dashboard" class="view flex flex-col gap-4">
+        <div class="grid grid-cols-2 gap-2.5">
+          <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3 shadow-sm">
+            <p class="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Plantas</p>
+            <p class="text-lg font-bold text-slate-800 dark:text-slate-100" id="stat-plants">–</p>
+          </div>
+          <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3 shadow-sm">
+            <p class="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Carpas</p>
+            <p class="text-lg font-bold text-slate-800 dark:text-slate-100" id="stat-tents">–</p>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <div class="flex items-center gap-1.5">
+            <button type="button" data-group="carpa" class="group-chip whitespace-nowrap text-[11px] font-semibold px-3 py-1.5 rounded-full border transition">Por carpa</button>
+            <button type="button" data-group="cepa" class="group-chip whitespace-nowrap text-[11px] font-semibold px-3 py-1.5 rounded-full border transition">Por cepa</button>
+          </div>
+          <div class="flex items-center gap-3">
+            <button type="button" id="btn-add-plant" class="text-cultivo-700 dark:text-cultivo-400 text-xs font-semibold flex items-center gap-1"><i class="fa-solid fa-plus"></i> Planta</button>
+            <button type="button" id="btn-add-tent" class="text-cultivo-700 dark:text-cultivo-400 text-xs font-semibold flex items-center gap-1"><i class="fa-solid fa-plus"></i> Carpa</button>
+          </div>
+        </div>
+
+        <div id="home-content" class="flex flex-col gap-3">
+          <p class="text-center text-xs text-slate-400 dark:text-slate-500 py-6">Cargando...</p>
+        </div>
+      </section>
+
+      <!-- DETALLE DE PLANTA -->
+      <section id="view-plant-detail" class="view flex flex-col gap-4" hidden>
+        <div id="plant-detail-card" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4"></div>
+        <div class="grid grid-cols-2 gap-2.5">
+          <button type="button" data-jump-watering class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-col items-center gap-1.5 shadow-sm active:scale-95 transition">
+            <i class="fa-solid fa-droplet text-teal-600 dark:text-teal-400"></i><span class="text-[11px] font-semibold text-slate-600 dark:text-slate-300">Riegos</span>
+          </button>
+          <button type="button" data-jump-photos class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-col items-center gap-1.5 shadow-sm active:scale-95 transition">
+            <i class="fa-solid fa-camera text-sky-600 dark:text-sky-400"></i><span class="text-[11px] font-semibold text-slate-600 dark:text-slate-300">Fotos</span>
+          </button>
+        </div>
+        <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-4">
+          <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">Notas</h3>
+          <p id="plant-detail-notes" class="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap"></p>
+        </div>
+      </section>
+
+      <!-- RIEGO Y NUTRIENTES -->
+      <section id="view-watering" class="view flex flex-col gap-4" hidden>
+        <div id="watering-filter-chips" class="flex gap-1.5 overflow-x-auto custom-scrollbar pb-1"></div>
+        <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div class="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800">
+            <h2 class="text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">Historial (timeline)</h2>
+          </div>
+          <div id="watering-timeline" class="divide-y divide-slate-100 dark:divide-slate-800"></div>
+        </div>
+        <p class="text-[11px] text-center text-slate-400 dark:text-slate-500">Para registrar un riego nuevo, editá la planta correspondiente desde su ficha.</p>
+      </section>
+
+      <!-- COSECHA -->
+      <section id="view-harvest" class="view flex flex-col gap-4" hidden>
+        <button type="button" id="btn-new-harvest" class="w-full bg-gradient-to-r from-amber-600 to-cultivo-600 hover:from-amber-700 hover:to-cultivo-700 text-white font-semibold text-sm py-2.5 rounded-xl shadow flex items-center justify-center gap-2 active:scale-[0.98] transition">
+          <i class="fa-solid fa-scissors"></i> Cerrar ciclo / registrar cosecha
+        </button>
+        <form id="harvest-form" hidden class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 grid grid-cols-2 gap-3">
+          <div class="col-span-2">
+            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Planta</label>
+            <select id="harvest-form-plant" required class="w-full mt-1 text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 bg-white dark:bg-slate-800"></select>
+          </div>
+          <div>
+            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Fecha de corte</label>
+            <input id="harvest-form-fecha" type="date" class="w-full mt-1 text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 bg-white dark:bg-slate-800 font-mono">
+          </div>
+          <div>
+            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Peso húmedo (g)</label>
+            <input id="harvest-form-humedo" type="number" step="0.1" placeholder="180" class="w-full mt-1 text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 bg-white dark:bg-slate-800 font-mono">
+          </div>
+          <div>
+            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Peso seco (g)</label>
+            <input id="harvest-form-seco" type="number" step="0.1" placeholder="45" class="w-full mt-1 text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 bg-white dark:bg-slate-800 font-mono">
+          </div>
+          <div>
+            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Curado</label>
+            <select id="harvest-form-curado" class="w-full mt-1 text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 bg-white dark:bg-slate-800">
+              <option>En secado</option><option>En curado</option><option>Curado finalizado</option>
+            </select>
+          </div>
+          <div class="col-span-2">
+            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Notas</label>
+            <textarea id="harvest-form-notas" rows="2" placeholder="Aroma, densidad, tricomas..." class="w-full mt-1 text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 bg-white dark:bg-slate-800 resize-none"></textarea>
+          </div>
+          <button type="submit" class="col-span-2 bg-cultivo-600 hover:bg-cultivo-700 text-white text-sm font-semibold py-2 rounded-lg mt-1">Guardar cosecha</button>
+        </form>
+        <div id="harvest-list" class="flex flex-col gap-2.5"></div>
+        <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-4">
+          <h2 class="text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300 mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-chart-simple text-cultivo-600 dark:text-cultivo-400"></i> Rendimiento por cepa (peso seco)
+          </h2>
+          <div id="harvest-analytics" class="flex flex-col gap-3"></div>
+        </div>
+      </section>
+
+      <!-- FOTOS -->
+      <section id="view-photos" class="view flex flex-col gap-4" hidden>
+        <div id="photos-filter-chips" class="flex gap-1.5 overflow-x-auto custom-scrollbar pb-1"></div>
+        <p class="text-[11px] text-center text-slate-400 dark:text-slate-500">Para agregar una foto, entrá a la planta correspondiente.</p>
+        <div id="photos-grid" class="grid grid-cols-3 gap-2"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL CRUD: CARPA — datos completos + ambiente propio + plantas ya cargadas -->
+  <div id="modal-backdrop-tent" hidden class="fixed inset-0 z-40 bg-black/50 flex items-end sm:items-center justify-center">
+    <div class="bg-white dark:bg-slate-900 w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[92vh] overflow-y-auto">
+      <form id="tent-form" class="flex flex-col">
+        <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 px-4 py-3 flex items-center justify-between z-10">
+          <h2 id="tent-modal-title" class="text-sm font-bold text-slate-800 dark:text-slate-100">Nueva carpa</h2>
+          <button type="button" data-close-tent class="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="p-4 flex flex-col gap-3">
+          <div>
+            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Nombre de la carpa</label>
+            <input id="tent-form-nombre" required type="text" placeholder="Ej: Carpa Principal" class="w-full mt-1 text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 bg-white dark:bg-slate-800">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Dimensiones</label>
+              <input id="tent-form-dimensiones" type="text" placeholder="100x100x200cm" class="w-full mt-1 text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 bg-white dark:bg-slate-800">
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Tipo de luz</label>
+              <input id="tent-form-tipoluz" type="text" placeholder="LED 320W" class="w-full mt-1 text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 bg-white dark:bg-slate-800">
+            </div>
+          </div>
+          <div>
+            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Extracción</label>
+            <input id="tent-form-extraccion" type="text" placeholder="Extractor 4&quot;" class="w-full mt-1 text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 bg-white dark:bg-slate-800">
+          </div>
+          <div>
+            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Notas</label>
+            <textarea id="tent-form-notas" rows="2" class="w-full mt-1 text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 bg-white dark:bg-slate-800 resize-none"></textarea>
+          </div>
+
+          <!-- Ambiente de esta carpa (solo en edición) -->
+          <div id="tent-environment-section" hidden>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Ambiente de esta carpa</label>
+              <button type="button" id="btn-toggle-env-form" class="text-[11px] font-semibold text-cultivo-700 dark:text-cultivo-400 flex items-center gap-1"><i class="fa-solid fa-plus"></i> Cargar lectura</button>
+            </div>
+            <div id="tent-environment-current" class="grid grid-cols-4 gap-1.5 mb-2"></div>
+            <div id="tent-environment-form" hidden class="grid grid-cols-2 gap-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 mb-2">
+              <input id="env-form-temp" type="number" step="0.1" placeholder="Temp °C" class="text-[11px] px-2 py-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+              <input id="env-form-humedad" type="number" step="0.1" placeholder="Humedad %" class="text-[11px] px-2 py-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+              <input id="env-form-luzhoras" type="text" placeholder="Luz (hs)" class="text-[11px] px-2 py-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+              <input id="env-form-co2" type="number" placeholder="CO2 ppm" class="text-[11px] px-2 py-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+              <button type="button" id="btn-save-env" class="col-span-2 text-[11px] font-semibold bg-cultivo-600 hover:bg-cultivo-700 text-white rounded py-1.5">Guardar lectura</button>
+            </div>
+          </div>
+
+          <!-- Plantas ya cargadas en esta carpa -->
+          <div id="tent-plants-section" hidden>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Plantas en esta carpa</label>
+              <button type="button" id="btn-add-plant-in-modal" class="text-[11px] font-semibold text-cultivo-700 dark:text-cultivo-400 flex items-center gap-1"><i class="fa-solid fa-plus"></i> Agregar</button>
+            </div>
+            <div id="tent-plants-list" class="flex flex-col gap-1.5"></div>
+          </div>
+        </div>
+        <div class="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2 sticky bottom-0 bg-white dark:bg-slate-900">
+          <button type="button" id="btn-delete-tent" hidden class="text-red-600 dark:text-red-400 text-xs font-semibold px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 mr-auto transition-colors">Eliminar carpa</button>
+          <button type="button" data-close-tent class="text-slate-500 dark:text-slate-400 text-sm font-semibold px-4 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">Cancelar</button>
+          <button type="submit" class="bg-cultivo-600 hover:bg-cultivo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL CRUD: PLANTA (incluye reasignar de carpa + riegos/pH/EC editables) -->
+  <div id="modal-backdrop-plant" hidden class="fixed inset-0 z-40 bg-black/50 flex items-end sm:items-center justify-center">
+    <div class="bg-white dark:bg-slate-900 w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[92vh] overflow-y-auto">
+      <form id="plant-form" class="flex flex-col">
+        <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 px-4 py-3 flex items-center justify-between z-10">
+          <h2 id="plant-modal-title" class="text-sm font-bold text-slate-800 dark:text-slate-100">Nueva planta</h2>
+          <button type="button" data-close-plant class="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="p-4 flex flex-col gap-3">
+          <div>
+            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Nombre de planta</label>
+            <input id="plant-form-nombre" required type="text" placeholder="Ej: Northern Lights #1" class="w-full mt-1 text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 bg-white dark:bg-slate-800">
+          </div>
+          <div>
+            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Cepa / genética</label>
+            <input id="plant-form-genetica" type="text" placeholder="Ej: Northern Lights (Índica)" class="w-full mt-1 text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 bg-white dark:bg-slate-800">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Carpa</label>
+              <select id="plant-form-tent" class="w-full mt-1 text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 bg-white dark:bg-slate-800"></select>
+              <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Cambiala acá para mover la planta a otra carpa.</p>
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Etapa actual</label>
+              <select id="plant-form-etapa" class="w-full mt-1 text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 bg-white dark:bg-slate-800">
+                <option>Enraizado</option><option>Vegetativo</option><option>Floración</option><option>Secado</option><option>Curado</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Fecha de germinación</label>
+            <input id="plant-form-fecha" type="date" class="w-full mt-1 text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 bg-white dark:bg-slate-800 font-mono">
+          </div>
+          <div>
+            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Notas</label>
+            <textarea id="plant-form-notas" rows="2" class="w-full mt-1 text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 bg-white dark:bg-slate-800 resize-none"></textarea>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Riegos y nutrientes (pH / EC)</label>
+              <button type="button" id="btn-add-modal-riego" class="text-[11px] font-semibold text-cultivo-700 dark:text-cultivo-400 flex items-center gap-1"><i class="fa-solid fa-plus"></i> Agregar riego</button>
+            </div>
+            <div id="plant-modal-riegos" class="flex flex-col gap-2"></div>
+            <p id="plant-modal-riegos-hint" class="text-[10px] text-slate-400 dark:text-slate-500 mt-1" hidden>Guardá la planta primero para poder cargar riegos.</p>
+          </div>
+        </div>
+        <div class="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2 sticky bottom-0 bg-white dark:bg-slate-900">
+          <button type="button" id="btn-delete-plant" hidden class="text-red-600 dark:text-red-400 text-xs font-semibold px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 mr-auto transition-colors">Eliminar planta</button>
+          <button type="button" data-close-plant class="text-slate-500 dark:text-slate-400 text-sm font-semibold px-4 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">Cancelar</button>
+          <button type="submit" class="bg-cultivo-600 hover:bg-cultivo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 opacity-0 translate-y-3 pointer-events-none transition-all duration-300 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2.5 text-sm border border-slate-700 max-w-[90vw]">
+    <i id="toast-icon" class="fa-solid fa-circle-check text-cultivo-400"></i>
+    <span id="toast-message">Guardado</span>
+  </div>
+
+  <script>
+    /* ============================== FIREBASE ============================== */
+    const firebaseConfig = {
+      apiKey: "AIzaSyA_EdUbNo-jsc3RNWWDsVS0OUH5xmAvevM",
+      authDomain: "mi-cultivo-app.firebaseapp.com",
+      projectId: "mi-cultivo-app",
+      storageBucket: "mi-cultivo-app.firebasestorage.app",
+      messagingSenderId: "685147424819",
+      appId: "1:685147424819:web:961d1866abd4f5a5f97b46",
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    async function apiFetch(path, options) {
+      options = options || {};
+      const user = auth.currentUser;
+      if (!user) throw new Error('No hay sesión activa');
+      const token = await user.getIdToken();
+      const res = await fetch('/api' + path, {
+        method: options.method || 'GET',
+        headers: Object.assign({ 'Authorization': 'Bearer ' + token }, options.body ? { 'Content-Type': 'application/json' } : {}),
+        body: options.body ? JSON.stringify(options.body) : undefined,
+      });
+      if (res.status === 204) return null;
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || ('Error ' + res.status));
+      return data;
+    }
+
+    /* ============================== ESTADO ============================== */
+    let tentsData = [];
+    let plantsData = [];
+    let harvestsData = [];
+    let currentPlantId = null;
+    let currentTentId = null; // carpa cuyo modal está abierto
+    let currentView = 'dashboard';
+    let homeGroupMode = 'carpa';
+    let wateringFilter = 'all';
+    let photosFilter = 'all';
+
+    const etapaStyle = {
+      'Enraizado':  'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300',
+      'Vegetativo': 'bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300',
+      'Floración':  'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300',
+      'Secado':     'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300',
+      'Curado':     'bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300',
+    };
+
+    function showToast(message, isError) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-message').textContent = message;
+      document.getElementById('toast-icon').className = isError ? 'fa-solid fa-triangle-exclamation text-red-400' : 'fa-solid fa-circle-check text-cultivo-400';
+      toast.classList.remove('opacity-0', 'translate-y-3');
+      setTimeout(() => toast.classList.add('opacity-0', 'translate-y-3'), 2600);
+    }
+
+    /* ============================== LOGIN / SESIÓN ============================== */
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('login-submit');
+      const errEl = document.getElementById('login-error');
+      errEl.hidden = true;
+      btn.disabled = true;
+      try {
+        await auth.signInWithEmailAndPassword(
+          document.getElementById('login-email').value.trim(),
+          document.getElementById('login-password').value
+        );
+      } catch (err) {
+        errEl.textContent = 'No pudimos iniciar sesión: revisá el email y la contraseña.';
+        errEl.hidden = false;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+    document.getElementById('btn-logout').addEventListener('click', () => auth.signOut());
+
+    auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        document.getElementById('view-login').hidden = true;
+        document.getElementById('app-shell').hidden = false;
+        document.getElementById('header-user').textContent = user.email || '';
+        await loadEverything();
+        showView('dashboard');
+      } else {
+        document.getElementById('app-shell').hidden = true;
+        document.getElementById('view-login').hidden = false;
+      }
+    });
+
+    /* ============================== NAVEGACIÓN ============================== */
+    const headerTitles = {
+      dashboard: 'Mi Cultivo', watering: 'Riego y nutrientes', harvest: 'Cosecha',
+      photos: 'Bitácora fotográfica', 'plant-detail': 'Detalle de planta',
+    };
+    function showView(id) {
+      document.querySelectorAll('.view').forEach(v => v.hidden = (v.id !== 'view-' + id));
+      document.getElementById('header-title').textContent = headerTitles[id] || 'Mi Cultivo';
+      document.getElementById('btn-back').hidden = (id !== 'plant-detail');
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        const active = btn.dataset.nav === id;
+        btn.classList.toggle('text-white', active);
+        btn.classList.toggle('border-white', active);
+        btn.classList.toggle('text-cultivo-200/70', !active);
+        btn.classList.toggle('border-transparent', !active);
+      });
+      currentView = id;
+      window.scrollTo({ top: 0 });
+    }
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.addEventListener('click', () => showView(btn.dataset.nav)));
+    document.getElementById('btn-back').addEventListener('click', () => showView('dashboard'));
+    document.getElementById('btn-logo-home').addEventListener('click', () => showView('dashboard'));
+
+    /* ============================== MODO OSCURO ============================== */
+    function applyDarkMode(dark) {
+      document.documentElement.classList.toggle('dark', dark);
+      document.getElementById('dark-toggle-icon').className = dark ? 'fa-solid fa-sun text-sm' : 'fa-solid fa-moon text-sm';
+    }
+    const savedTheme = localStorage.getItem('mi_cultivo_theme_v1');
+    applyDarkMode(savedTheme ? savedTheme === 'dark' : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches));
+    document.getElementById('btn-dark-toggle').addEventListener('click', () => {
+      const nowDark = !document.documentElement.classList.contains('dark');
+      applyDarkMode(nowDark);
+      localStorage.setItem('mi_cultivo_theme_v1', nowDark ? 'dark' : 'light');
+    });
+
+    /* ============================== CARGA DE DATOS ============================== */
+    async function loadEverything() {
+      try {
+        const [tents, harvests] = await Promise.all([apiFetch('/tents'), apiFetch('/harvests')]);
+        tentsData = tents;
+        plantsData = tents.flatMap(t => t.plants || []);
+        harvestsData = harvests;
+      } catch (err) {
+        showToast(err.message, true);
+        tentsData = []; plantsData = []; harvestsData = [];
+      }
+      renderHome();
+      renderWatering();
+      renderHarvest();
+      renderPhotos();
+    }
+
+    function ambienteLine(amb) {
+      if (!amb) return 'Sin lecturas ambientales todavía';
+      const parts = [];
+      if (amb.temp !== null && amb.temp !== undefined && amb.temp !== '') parts.push(amb.temp + '°C');
+      if (amb.humedad !== null && amb.humedad !== undefined && amb.humedad !== '') parts.push(amb.humedad + '%');
+      if (amb.luzHoras) parts.push(amb.luzHoras + (String(amb.luzHoras).includes('h') ? '' : 'h'));
+      if (amb.co2 !== null && amb.co2 !== undefined && amb.co2 !== '') parts.push(amb.co2 + ' ppm');
+      return parts.length ? parts.join(' · ') : 'Sin lecturas ambientales todavía';
+    }
+
+    /* ============================== HOME (por carpa / por cepa) ============================== */
+    function daysSince(dateStr) {
+      if (!dateStr) return '—';
+      return Math.max(0, Math.round((Date.now() - new Date(dateStr).getTime()) / 86400000));
+    }
+
+    function plantCardHtml(p) {
+      return `
+        <button type="button" data-open-plant="${p.id}" class="text-left bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden active:scale-[0.98] transition">
+          <div class="h-16 bg-gradient-to-br from-cultivo-100 to-cultivo-50 dark:from-slate-800 dark:to-slate-800/50 flex items-center justify-center">
+            <i class="fa-solid fa-cannabis text-xl text-cultivo-400 dark:text-cultivo-600"></i>
+          </div>
+          <div class="p-2">
+            <p class="text-[11px] font-bold text-slate-800 dark:text-slate-100 truncate">${p.nombre}</p>
+            <p class="text-[9px] text-slate-400 dark:text-slate-500 truncate">${p.genetica || ''}</p>
+            <span class="mt-1 inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${etapaStyle[p.etapa] || ''}">${p.etapa}</span>
+          </div>
+        </button>`;
+    }
+
+    function renderTentSection(tent, plants) {
+      const title = tent ? tent.nombre : 'Sin carpa asignada';
+      const editBtn = tent ? `<button type="button" data-edit-tent="${tent.id}" title="Editar carpa" class="w-7 h-7 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500"><i class="fa-solid fa-pen text-xs"></i></button>` : '';
+      const addBtn = tent ? `<button type="button" data-add-plant-tent="${tent.id}" class="text-cultivo-700 dark:text-cultivo-400 text-[11px] font-semibold flex items-center gap-1"><i class="fa-solid fa-plus"></i> Planta en esta carpa</button>` : '';
+      const ambiente = tent ? `<p class="text-[10px] text-slate-400 dark:text-slate-500 truncate flex items-center gap-1"><i class="fa-solid fa-temperature-half text-[9px]"></i> ${ambienteLine(tent.ambiente)}</p>` : `<p class="text-[10px] text-slate-400 dark:text-slate-500">Plantas sin carpa asignada todavía.</p>`;
+      const plantsHtml = plants.length ? `<div class="grid grid-cols-2 gap-3 mt-3">${plants.map(plantCardHtml).join('')}</div>` : `<p class="text-[11px] text-slate-400 dark:text-slate-500 mt-3">Sin plantas todavía.</p>`;
+      return `
+        <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-3.5">
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex items-center gap-2 min-w-0">
+              <div class="w-8 h-8 rounded-lg bg-cultivo-50 dark:bg-cultivo-950/50 text-cultivo-600 dark:text-cultivo-400 flex items-center justify-center shrink-0"><i class="fa-solid fa-warehouse text-xs"></i></div>
+              <div class="min-w-0">
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">${title}</p>
+                ${ambiente}
+              </div>
+            </div>
+            <div class="flex items-center gap-1 shrink-0"><span class="text-[10px] font-bold text-slate-400 dark:text-slate-500">${plants.length}</span>${editBtn}</div>
+          </div>
+          ${plantsHtml}
+          <div class="mt-2.5">${addBtn}</div>
+        </div>`;
+    }
+
+    function renderHomeByCarpa() {
+      const orphan = plantsData.filter(p => !p.tentId || !tentsData.find(t => t.id === p.tentId));
+      let html = tentsData.map(t => renderTentSection(t, t.plants || [])).join('');
+      if (orphan.length) html += renderTentSection(null, orphan);
+      return html || `<p class="text-center text-xs text-slate-400 dark:text-slate-500 py-6">Todavía no hay carpas cargadas.</p>`;
+    }
+
+    function renderHomeByCepa() {
+      const cepas = {};
+      plantsData.forEach(p => { const key = p.genetica || 'Sin genética'; (cepas[key] = cepas[key] || []).push(p); });
+      return Object.entries(cepas).map(([cepa, plants]) => {
+        const byTent = {};
+        plants.forEach(p => { const tname = (tentsData.find(t => t.id === p.tentId) || {}).nombre || 'Sin carpa'; byTent[tname] = (byTent[tname] || 0) + 1; });
+        const breakdown = Object.entries(byTent).map(([n, c]) => `${n}: ${c}`).join(' · ');
+        return `
+          <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-3.5">
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">${cepa}</p>
+              <span class="text-xs font-bold text-cultivo-700 dark:text-cultivo-400 whitespace-nowrap">${plants.length} planta${plants.length === 1 ? '' : 's'}</span>
+            </div>
+            <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1">${breakdown}</p>
+          </div>`;
+      }).join('');
+    }
+
+    function renderHome() {
+      document.getElementById('stat-plants').textContent = plantsData.length;
+      document.getElementById('stat-tents').textContent = tentsData.length;
+      document.getElementById('home-content').innerHTML = homeGroupMode === 'carpa' ? renderHomeByCarpa() : renderHomeByCepa();
+      document.querySelectorAll('[data-open-plant]').forEach(btn => btn.addEventListener('click', () => openPlantDetail(btn.dataset.openPlant)));
+      document.querySelectorAll('[data-edit-tent]').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); openTentModal(btn.dataset.editTent); }));
+      document.querySelectorAll('[data-add-plant-tent]').forEach(btn => btn.addEventListener('click', () => openPlantModal(null, btn.dataset.addPlantTent)));
+    }
+
+    document.querySelectorAll('[data-group]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        homeGroupMode = btn.dataset.group;
+        document.querySelectorAll('[data-group]').forEach(b => {
+          const active = b === btn;
+          b.classList.toggle('bg-cultivo-600', active); b.classList.toggle('text-white', active); b.classList.toggle('border-cultivo-600', active);
+          b.classList.toggle('bg-white', !active); b.classList.toggle('dark:bg-slate-900', !active); b.classList.toggle('text-slate-500', !active);
+          b.classList.toggle('dark:text-slate-400', !active); b.classList.toggle('border-slate-200', !active); b.classList.toggle('dark:border-slate-700', !active);
+        });
+        renderHome();
+      });
+    });
+    document.querySelector('[data-group="carpa"]').classList.add('bg-cultivo-600', 'text-white', 'border-cultivo-600');
+    document.querySelector('[data-group="cepa"]').classList.add('bg-white', 'dark:bg-slate-900', 'text-slate-500', 'dark:text-slate-400', 'border-slate-200', 'dark:border-slate-700');
+
+    document.getElementById('btn-add-plant').addEventListener('click', () => openPlantModal());
+    document.getElementById('btn-add-tent').addEventListener('click', () => openTentModal());
+
+    /* ============================== DETALLE DE PLANTA ============================== */
+    async function openPlantDetail(plantId) {
+      currentPlantId = plantId;
+      let p;
+      try { p = await apiFetch('/plants/' + plantId); } catch (err) { showToast(err.message, true); return; }
+      const tentName = (tentsData.find(t => t.id === p.tentId) || {}).nombre || 'Sin carpa asignada';
+      document.getElementById('plant-detail-card').innerHTML = `
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0">
+            <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 truncate">${p.nombre}</h2>
+            <p class="text-xs text-slate-400 dark:text-slate-500 truncate">${p.genetica || ''}</p>
+            <p class="text-[11px] text-slate-400 dark:text-slate-500 flex items-center gap-1 mt-0.5"><i class="fa-solid fa-warehouse text-[10px]"></i> ${tentName}</p>
+          </div>
+          <div class="flex flex-col items-end gap-1.5 shrink-0">
+            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${etapaStyle[p.etapa] || ''}">${p.etapa}</span>
+            <button type="button" id="btn-edit-plant-detail" class="text-[11px] font-semibold text-cultivo-700 dark:text-cultivo-400 flex items-center gap-1"><i class="fa-solid fa-pen text-[10px]"></i> Editar</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 mt-3 text-xs">
+          <div><p class="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase">Germinación</p><p class="font-mono text-slate-700 dark:text-slate-200">${p.fecha || '—'}</p></div>
+          <div><p class="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase">Días de vida</p><p class="font-mono text-slate-700 dark:text-slate-200">${daysSince(p.fecha)}</p></div>
+        </div>`;
+      document.getElementById('plant-detail-notes').textContent = p.notas || 'Sin notas.';
+      document.getElementById('btn-edit-plant-detail').addEventListener('click', () => openPlantModal(p.id));
+      showView('plant-detail');
+    }
+
+    /* ============================== MODAL CARPA ============================== */
+    let editingTentId = null;
+    let deleteTentArmed = false;
+
+    function resetDeleteTentButton() {
+      const btn = document.getElementById('btn-delete-tent');
+      btn.textContent = 'Eliminar carpa'; btn.classList.remove('bg-red-600', 'text-white'); deleteTentArmed = false;
+    }
+
+    function renderTentEnvironmentCurrent(tent) {
+      const amb = tent.ambiente || {};
+      const cells = [
+        ['Temp', amb.temp !== undefined && amb.temp !== null ? amb.temp + '°C' : '—'],
+        ['Humedad', amb.humedad !== undefined && amb.humedad !== null ? amb.humedad + '%' : '—'],
+        ['Luz', amb.luzHoras || '—'],
+        ['CO2', amb.co2 !== undefined && amb.co2 !== null ? amb.co2 + 'ppm' : '—'],
+      ];
+      document.getElementById('tent-environment-current').innerHTML = cells.map(([label, value]) => `
+        <div class="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg p-1.5 text-center">
+          <p class="text-[8px] font-semibold text-slate-400 dark:text-slate-500 uppercase">${label}</p>
+          <p class="text-[11px] font-bold text-slate-700 dark:text-slate-200">${value}</p>
+        </div>`).join('');
+    }
+
+    async function renderTentPlantsList(tentId) {
+      const plants = plantsData.filter(p => p.tentId === tentId);
+      document.getElementById('tent-plants-list').innerHTML = plants.length ? plants.map(p => `
+        <button type="button" data-modal-open-plant="${p.id}" class="flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-left">
+          <span class="text-[11px] font-semibold text-slate-700 dark:text-slate-200 truncate">${p.nombre}</span>
+          <span class="text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${etapaStyle[p.etapa] || ''}">${p.etapa}</span>
+        </button>`).join('') : `<p class="text-[11px] text-slate-400 dark:text-slate-500">Todavía no hay plantas en esta carpa.</p>`;
+      document.querySelectorAll('[data-modal-open-plant]').forEach(btn => btn.addEventListener('click', () => { closeTentModal(); openPlantModal(btn.dataset.modalOpenPlant); }));
+    }
+
+    function openTentModal(tentId) {
+      editingTentId = tentId || null;
+      document.getElementById('tent-form').reset();
+      resetDeleteTentButton();
+      document.getElementById('btn-delete-tent').hidden = !tentId;
+      document.getElementById('tent-environment-section').hidden = !tentId;
+      document.getElementById('tent-plants-section').hidden = !tentId;
+      document.getElementById('tent-environment-form').hidden = true;
+
+      if (tentId) {
+        const t = tentsData.find(x => x.id === tentId);
+        document.getElementById('tent-modal-title').textContent = 'Editar carpa';
+        document.getElementById('tent-form-nombre').value = t.nombre || '';
+        document.getElementById('tent-form-dimensiones').value = t.dimensiones || '';
+        document.getElementById('tent-form-tipoluz').value = t.tipoLuz || '';
+        document.getElementById('tent-form-extraccion').value = t.extraccion || '';
+        document.getElementById('tent-form-notas').value = t.notas || '';
+        renderTentEnvironmentCurrent(t);
+        renderTentPlantsList(tentId);
+      } else {
+        document.getElementById('tent-modal-title').textContent = 'Nueva carpa';
+      }
+      document.getElementById('modal-backdrop-tent').hidden = false;
+    }
+    function closeTentModal() { document.getElementById('modal-backdrop-tent').hidden = true; }
+    document.querySelectorAll('[data-close-tent]').forEach(btn => btn.addEventListener('click', closeTentModal));
+    document.getElementById('modal-backdrop-tent').addEventListener('click', (e) => { if (e.target.id === 'modal-backdrop-tent') closeTentModal(); });
+
+    document.getElementById('btn-toggle-env-form').addEventListener('click', () => {
+      document.getElementById('tent-environment-form').hidden = !document.getElementById('tent-environment-form').hidden;
+    });
+    document.getElementById('btn-save-env').addEventListener('click', async () => {
+      if (!editingTentId) return;
+      try {
+        await apiFetch('/tents/' + editingTentId + '/environment', { method: 'POST', body: {
+          temp: document.getElementById('env-form-temp').value || null,
+          humedad: document.getElementById('env-form-humedad').value || null,
+          luzHoras: document.getElementById('env-form-luzhoras').value || null,
+          co2: document.getElementById('env-form-co2').value || null,
+        }});
+        const t = await apiFetch('/tents/' + editingTentId);
+        tentsData = tentsData.map(x => x.id === t.id ? Object.assign({}, x, t) : x);
+        renderTentEnvironmentCurrent(t);
+        document.getElementById('tent-environment-form').hidden = true;
+        renderHome();
+        showToast('Lectura ambiental guardada');
+      } catch (err) { showToast(err.message, true); }
+    });
+
+    document.getElementById('btn-add-plant-in-modal').addEventListener('click', () => { const t = editingTentId; closeTentModal(); openPlantModal(null, t); });
+
+    document.getElementById('tent-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        nombre: document.getElementById('tent-form-nombre').value.trim(),
+        dimensiones: document.getElementById('tent-form-dimensiones').value.trim(),
+        tipoLuz: document.getElementById('tent-form-tipoluz').value.trim(),
+        extraccion: document.getElementById('tent-form-extraccion').value.trim(),
+        notas: document.getElementById('tent-form-notas').value.trim(),
+      };
+      if (!payload.nombre) return;
+      try {
+        if (editingTentId) { await apiFetch('/tents/' + editingTentId, { method: 'PUT', body: payload }); showToast('Carpa actualizada'); }
+        else { await apiFetch('/tents', { method: 'POST', body: payload }); showToast('Carpa creada'); }
+        closeTentModal();
+        await loadEverything();
+      } catch (err) { showToast(err.message, true); }
+    });
+
+    document.getElementById('btn-delete-tent').addEventListener('click', async () => {
+      if (!deleteTentArmed) {
+        deleteTentArmed = true;
+        const btn = document.getElementById('btn-delete-tent');
+        btn.textContent = '¿Confirmar eliminación?'; btn.classList.add('bg-red-600', 'text-white');
+        return;
+      }
+      try { await apiFetch('/tents/' + editingTentId, { method: 'DELETE' }); closeTentModal(); await loadEverything(); showToast('Carpa eliminada'); }
+      catch (err) { showToast(err.message, true); }
+    });
+
+    /* ============================== MODAL PLANTA ============================== */
+    let editingPlantId = null;
+    let deletePlantArmed = false;
+    let modalRiegos = [];
+
+    function resetDeletePlantButton() {
+      const btn = document.getElementById('btn-delete-plant');
+      btn.textContent = 'Eliminar planta'; btn.classList.remove('bg-red-600', 'text-white'); deletePlantArmed = false;
+    }
+    function populateTentSelect() {
+      const select = document.getElementById('plant-form-tent');
+      select.innerHTML = '<option value="">Sin carpa asignada</option>' + tentsData.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('');
+    }
+
+    async function openPlantModal(plantId, presetTentId) {
+      editingPlantId = plantId || null;
+      document.getElementById('plant-form').reset();
+      resetDeletePlantButton();
+      document.getElementById('btn-delete-plant').hidden = !plantId;
+      populateTentSelect();
+      document.getElementById('plant-modal-riegos-hint').hidden = !!plantId;
+
+      if (plantId) {
+        let p;
+        try { p = await apiFetch('/plants/' + plantId); } catch (err) { showToast(err.message, true); return; }
+        document.getElementById('plant-modal-title').textContent = 'Editar planta';
+        document.getElementById('plant-form-nombre').value = p.nombre || '';
+        document.getElementById('plant-form-genetica').value = p.genetica || '';
+        document.getElementById('plant-form-tent').value = p.tentId || '';
+        document.getElementById('plant-form-fecha').value = p.fecha || '';
+        document.getElementById('plant-form-etapa').value = p.etapa || 'Enraizado';
+        document.getElementById('plant-form-notas').value = p.notas || '';
+        modalRiegos = (p.waterings || []).map(w => Object.assign({}, w));
+      } else {
+        document.getElementById('plant-modal-title').textContent = 'Nueva planta';
+        document.getElementById('plant-form-tent').value = presetTentId || '';
+        document.getElementById('plant-form-fecha').value = new Date().toISOString().split('T')[0];
+        document.getElementById('plant-form-etapa').value = 'Enraizado';
+        modalRiegos = [];
+      }
+      renderModalRiegos();
+      document.getElementById('modal-backdrop-plant').hidden = false;
+    }
+    function closePlantModal() { document.getElementById('modal-backdrop-plant').hidden = true; }
+    document.querySelectorAll('[data-close-plant]').forEach(btn => btn.addEventListener('click', closePlantModal));
+    document.getElementById('modal-backdrop-plant').addEventListener('click', (e) => { if (e.target.id === 'modal-backdrop-plant') closePlantModal(); });
+
+    function renderModalRiegos() {
+      const container = document.getElementById('plant-modal-riegos');
+      const disabled = !editingPlantId;
+      container.innerHTML = modalRiegos.length ? modalRiegos.map((r, idx) => `
+        <div class="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 flex flex-col gap-1.5">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold text-teal-700 dark:text-teal-400 flex items-center gap-1"><i class="fa-solid fa-droplet text-[9px]"></i> Riego</span>
+            <button type="button" data-remove-modal-riego="${idx}" class="text-slate-300 hover:text-red-500 transition text-xs"><i class="fa-solid fa-circle-xmark"></i></button>
+          </div>
+          <div class="grid grid-cols-2 gap-1.5">
+            <input type="date" value="${r.fecha || ''}" data-modal-riego-field="${idx}|fecha" class="text-[11px] font-mono px-2 py-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+            <input type="text" placeholder="Producto" value="${r.producto || ''}" data-modal-riego-field="${idx}|producto" class="text-[11px] px-2 py-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+            <input type="text" placeholder="pH" value="${r.ph || ''}" data-modal-riego-field="${idx}|ph" class="text-[11px] font-mono px-2 py-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-center">
+            <input type="text" placeholder="EC" value="${r.ec || ''}" data-modal-riego-field="${idx}|ec" class="text-[11px] font-mono px-2 py-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-center">
+          </div>
+        </div>`).join('') : `<p class="text-[11px] text-slate-400 dark:text-slate-500 text-center py-2">Sin riegos cargados todavía.</p>`;
+      container.querySelectorAll('[data-remove-modal-riego]').forEach(btn => btn.addEventListener('click', async () => {
+        const idx = Number(btn.dataset.removeModalRiego);
+        const r = modalRiegos[idx];
+        if (r.id && editingPlantId) {
+          try { await apiFetch('/plants/' + editingPlantId + '/waterings/' + r.id, { method: 'DELETE' }); } catch (err) { showToast(err.message, true); return; }
+        }
+        modalRiegos.splice(idx, 1); renderModalRiegos();
+      }));
+      container.querySelectorAll('[data-modal-riego-field]').forEach(input => input.addEventListener('input', () => {
+        const [idx, field] = input.dataset.modalRiegoField.split('|');
+        modalRiegos[idx][field] = input.value;
+      }));
+      document.getElementById('btn-add-modal-riego').disabled = disabled;
+    }
+
+    document.getElementById('btn-add-modal-riego').addEventListener('click', async () => {
+      if (!editingPlantId) { showToast('Guardá la planta primero para poder cargar riegos', true); return; }
+      try {
+        const created = await apiFetch('/plants/' + editingPlantId + '/waterings', { method: 'POST', body: { fecha: new Date().toISOString().split('T')[0] } });
+        modalRiegos.push(created);
+        renderModalRiegos();
+      } catch (err) { showToast(err.message, true); }
+    });
+
+    // Guarda cambios de un riego existente al perder foco (autosave simple).
+    document.getElementById('plant-modal-riegos').addEventListener('focusout', async (e) => {
+      const input = e.target.closest('[data-modal-riego-field]');
+      if (!input || !editingPlantId) return;
+      const [idx] = input.dataset.modalRiegoField.split('|');
+      const r = modalRiegos[idx];
+      if (!r || !r.id) return;
+      try { await apiFetch('/plants/' + editingPlantId + '/waterings/' + r.id, { method: 'PUT', body: { fecha: r.fecha, producto: r.producto, ph: r.ph, ec: r.ec } }); }
+      catch (err) { showToast(err.message, true); }
+    });
+
+    document.getElementById('plant-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        nombre: document.getElementById('plant-form-nombre').value.trim(),
+        genetica: document.getElementById('plant-form-genetica').value.trim(),
+        tentId: document.getElementById('plant-form-tent').value || null,
+        fecha: document.getElementById('plant-form-fecha').value,
+        etapa: document.getElementById('plant-form-etapa').value,
+        notas: document.getElementById('plant-form-notas').value.trim(),
+      };
+      if (!payload.nombre) return;
+      try {
+        if (editingPlantId) { await apiFetch('/plants/' + editingPlantId, { method: 'PUT', body: payload }); showToast('Planta actualizada'); }
+        else {
+          const created = await apiFetch('/plants', { method: 'POST', body: payload });
+          editingPlantId = created.id;
+          showToast('Planta creada — ya podés cargarle riegos');
+        }
+        closePlantModal();
+        await loadEverything();
+        if (currentView === 'plant-detail' && currentPlantId === editingPlantId) openPlantDetail(editingPlantId);
+      } catch (err) { showToast(err.message, true); }
+    });
+
+    document.getElementById('btn-delete-plant').addEventListener('click', async () => {
+      if (!deletePlantArmed) {
+        deletePlantArmed = true;
+        const btn = document.getElementById('btn-delete-plant');
+        btn.textContent = '¿Confirmar eliminación?'; btn.classList.add('bg-red-600', 'text-white');
+        return;
+      }
+      try {
+        await apiFetch('/plants/' + editingPlantId, { method: 'DELETE' });
+        closePlantModal();
+        await loadEverything();
+        showToast('Planta eliminada');
+        if (currentView === 'plant-detail') showView('dashboard');
+      } catch (err) { showToast(err.message, true); }
+    });
+
+    /* ============================== RIEGO (timeline global, filtro por planta) ============================== */
+    function renderWateringChips() {
+      const chips = [{ id: 'all', label: 'Todas' }, ...plantsData.map(p => ({ id: p.id, label: p.nombre }))];
+      document.getElementById('watering-filter-chips').innerHTML = chips.map(c => `
+        <button type="button" data-chip="${c.id}" class="whitespace-nowrap text-[11px] font-semibold px-3 py-1.5 rounded-full border transition ${wateringFilter === c.id ? 'bg-cultivo-600 text-white border-cultivo-600' : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'}">${c.label}</button>`).join('');
+      document.querySelectorAll('#watering-filter-chips [data-chip]').forEach(btn => btn.addEventListener('click', () => { wateringFilter = btn.dataset.chip; renderWatering(); }));
+    }
+
+    async function renderWatering() {
+      renderWateringChips();
+      const timeline = document.getElementById('watering-timeline');
+      const targets = wateringFilter === 'all' ? plantsData : plantsData.filter(p => p.id === wateringFilter);
+      if (!targets.length) { timeline.innerHTML = `<p class="px-4 py-6 text-center text-xs text-slate-400 dark:text-slate-500">Sin plantas todavía.</p>`; return; }
+      timeline.innerHTML = `<p class="px-4 py-6 text-center text-xs text-slate-400 dark:text-slate-500">Cargando...</p>`;
+      try {
+        const lists = await Promise.all(targets.map(p => apiFetch('/plants/' + p.id + '/waterings').then(ws => ws.map(w => Object.assign({ plantNombre: p.nombre }, w)))));
+        const all = lists.flat().sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+        timeline.innerHTML = all.length ? all.map(w => `
+          <div class="px-4 py-3 flex items-start gap-3">
+            <div class="w-1 self-stretch rounded-full bg-teal-400 dark:bg-teal-600"></div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between gap-2">
+                <p class="text-xs font-bold text-slate-700 dark:text-slate-200">${w.plantNombre}</p>
+                <span class="text-[10px] font-mono text-slate-400 dark:text-slate-500">${w.fecha || ''}</span>
+              </div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">${w.producto || ''} ${w.cantidad ? '· ' + w.cantidad : ''}</p>
+              <div class="flex gap-1.5 mt-1">
+                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">pH ${w.ph || '—'}</span>
+                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">EC ${w.ec || '—'}</span>
+              </div>
+            </div>
+          </div>`).join('') : `<p class="px-4 py-6 text-center text-xs text-slate-400 dark:text-slate-500">Sin riegos registrados todavía.</p>`;
+      } catch (err) { showToast(err.message, true); }
+    }
+
+    /* ============================== COSECHA ============================== */
+    function populateHarvestPlantSelect() {
+      document.getElementById('harvest-form-plant').innerHTML = plantsData.map(p => `<option value="${p.id}" data-cepa="${p.genetica || ''}">${p.nombre}</option>`).join('');
+    }
+    document.getElementById('btn-new-harvest').addEventListener('click', () => {
+      populateHarvestPlantSelect();
+      const form = document.getElementById('harvest-form');
+      form.hidden = !form.hidden;
+    });
+    document.getElementById('harvest-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const select = document.getElementById('harvest-form-plant');
+      const cepa = select.selectedOptions[0] ? select.selectedOptions[0].dataset.cepa : '';
+      try {
+        await apiFetch('/harvests', { method: 'POST', body: {
+          plantId: select.value, cepa,
+          fecha: document.getElementById('harvest-form-fecha').value,
+          pesoHumedo: Number(document.getElementById('harvest-form-humedo').value) || null,
+          pesoSeco: Number(document.getElementById('harvest-form-seco').value) || null,
+          curado: document.getElementById('harvest-form-curado').value,
+          notas: document.getElementById('harvest-form-notas').value,
+        }});
+        document.getElementById('harvest-form').hidden = true;
+        document.getElementById('harvest-form').reset();
+        harvestsData = await apiFetch('/harvests');
+        renderHarvest();
+        showToast('Cosecha registrada');
+      } catch (err) { showToast(err.message, true); }
+    });
+
+    function renderHarvest() {
+      document.getElementById('harvest-list').innerHTML = harvestsData.length ? harvestsData.map(h => `
+        <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-3.5 flex items-center justify-between gap-2">
+          <div class="min-w-0">
+            <p class="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">${h.cepa || '—'}</p>
+            <p class="text-[10px] text-slate-400 dark:text-slate-500 font-mono">${h.fecha || ''} · ${h.pesoHumedo ?? '—'}g húmedo → ${h.pesoSeco ?? '—'}g seco</p>
+          </div>
+          <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 whitespace-nowrap">${h.curado}</span>
+        </div>`).join('') : `<p class="text-center text-xs text-slate-400 dark:text-slate-500 py-4">Sin cosechas registradas todavía.</p>`;
+
+      const withPeso = harvestsData.filter(h => h.pesoSeco);
+      const max = Math.max(1, ...withPeso.map(h => h.pesoSeco));
+      document.getElementById('harvest-analytics').innerHTML = withPeso.length ? withPeso.map(h => `
+        <div>
+          <div class="flex items-center justify-between text-[11px] mb-1"><span class="font-semibold text-slate-600 dark:text-slate-300">${h.cepa || '—'}</span><span class="font-mono text-slate-500 dark:text-slate-400">${h.pesoSeco} g</span></div>
+          <div class="h-2.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden"><div class="h-full rounded-full bg-cultivo-600 dark:bg-cultivo-400" style="width:${Math.round((h.pesoSeco / max) * 100)}%"></div></div>
+        </div>`).join('') : `<p class="text-[11px] text-slate-400 dark:text-slate-500 text-center py-2">Sin datos todavía.</p>`;
+    }
+
+    /* ============================== FOTOS ============================== */
+    function renderPhotosChips() {
+      const chips = [{ id: 'all', label: 'Todas' }, ...plantsData.map(p => ({ id: p.id, label: p.nombre }))];
+      document.getElementById('photos-filter-chips').innerHTML = chips.map(c => `
+        <button type="button" data-pchip="${c.id}" class="whitespace-nowrap text-[11px] font-semibold px-3 py-1.5 rounded-full border transition ${photosFilter === c.id ? 'bg-cultivo-600 text-white border-cultivo-600' : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'}">${c.label}</button>`).join('');
+      document.querySelectorAll('#photos-filter-chips [data-pchip]').forEach(btn => btn.addEventListener('click', () => { photosFilter = btn.dataset.pchip; renderPhotos(); }));
+    }
+    async function renderPhotos() {
+      renderPhotosChips();
+      const grid = document.getElementById('photos-grid');
+      const targets = photosFilter === 'all' ? plantsData : plantsData.filter(p => p.id === photosFilter);
+      if (!targets.length) { grid.innerHTML = `<p class="col-span-3 text-center text-xs text-slate-400 dark:text-slate-500 py-6">Sin plantas todavía.</p>`; return; }
+      try {
+        const lists = await Promise.all(targets.map(p => apiFetch('/plants/' + p.id + '/photos')));
+        const all = lists.flat();
+        grid.innerHTML = all.length ? all.map(ph => `
+          <a href="${ph.url}" target="_blank" rel="noopener" class="aspect-square rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 overflow-hidden relative block">
+            <img src="${ph.url}" class="w-full h-full object-cover" loading="lazy">
+            <span class="absolute bottom-1 right-1.5 text-[9px] font-mono text-white bg-black/50 px-1 rounded">${ph.fecha}</span>
+          </a>`).join('') : `<p class="col-span-3 text-center text-xs text-slate-400 dark:text-slate-500 py-6">Sin fotos todavía.</p>`;
+      } catch (err) { showToast(err.message, true); }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Planilla de Seguimiento de Cultivo</title>
+  <!-- Mobile & PWA Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Mi Cultivo">
+  <meta name="theme-color" content="#14532d">
+  <link rel="apple-touch-icon" href="https://api.iconify.design/lucide:sprout.svg?color=%2322c55e">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cultivo: {
+              50: '#f2fbf4',
+              100: '#e1f7e6',
+              200: '#c5eed0',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              800: '#166534',
+              900: '#14532d',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* Estilos optimizados para impresión en papel A4 horizontal */
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+      body {
+        background: white !important;
+        color: black !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .print-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-shadow: none !important;
+        border: none !important;
+      }
+      table {
+        font-size: 10px !important;
+        width: 100% !important;
+        border-collapse: collapse !important;
+      }
+      th, td {
+        border: 1px solid #333 !important;
+        padding: 4px !important;
+      }
+      .print-cell-input {
+        border: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+        font-size: 9px !important;
+      }
+      .fert-app-card {
+        border: 1px solid #cbd5e1 !important;
+        background: white !important;
+        page-break-inside: avoid;
+        margin-bottom: 3px !important;
+        padding: 3px !important;
+      }
+      .badge-print {
+        border: 1px solid #666;
+        padding: 1px 4px;
+      }
+      @page {
+        size: landscape;
+        margin: 0.8cm;
+      }
+    }
+
+    /* Barra de scroll estilizada para la tabla anclada */
+    .custom-scrollbar::-webkit-scrollbar {
+      height: 8px;
+      width: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #94a3b8;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #64748b;
+    }
+
+    /* Columna anclada (sticky) para el nombre de la planta */
+    .sticky-col-header {
+      position: sticky;
+      left: 0;
+      z-index: 20;
+    }
+    .sticky-col-cell {
+      position: sticky;
+      left: 0;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-cultivo-200">
+
+  <!-- Encabezado y Barra Superior -->
+  <header class="bg-cultivo-900 text-white shadow-md no-print border-b border-cultivo-700">
+    <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-cultivo-600 flex items-center justify-center text-white shadow-inner">
+          <i class="fa-solid fa-seedling text-xl"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2 flex-wrap">
+            Control y Seguimiento de Cultivo
+            <span id="cloud-sync-status" class="text-xs font-medium bg-cultivo-700/80 text-cultivo-200 px-2.5 py-0.5 rounded-full border border-cultivo-500/60 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-cultivo-400 animate-pulse"></span>
+              <span id="sync-text">Conectando...</span>
+            </span>
+          </h1>
+          <p class="text-xs text-cultivo-200">Registro de fechas, origen, variedades, riegos y fertilización (EC / pH)</p>
+        </div>
+      </div>
+
+      <!-- Botones de Acción -->
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="btn-copy-app-code" class="bg-gradient-to-r from-emerald-600 to-cultivo-600 hover:from-emerald-700 hover:to-cultivo-700 text-white font-bold text-xs sm:text-sm px-3.5 py-2 rounded-lg shadow-md transition-all flex items-center gap-1.5 active:scale-95">
+          <i class="fa-solid fa-copy"></i>
+          <span>Copiar Código de la App</span>
+        </button>
+        <button id="btn-install-app" class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs sm:text-sm px-3.5 py-2 rounded-lg shadow-md transition-all flex items-center gap-1.5 active:scale-95">
+          <i class="fa-solid fa-mobile-screen-button"></i>
+          <span>Ayuda para Celular</span>
+        </button>
+        <button id="btn-add-row" class="bg-cultivo-500 hover:bg-cultivo-600 text-white font-semibold text-xs sm:text-sm px-3.5 py-2 rounded-lg shadow transition-all flex items-center gap-1.5 active:scale-95">
+          <i class="fa-solid fa-plus"></i>
+          <span>Nueva Planta</span>
+        </button>
+        <button id="btn-print-sheet" class="bg-slate-700 hover:bg-slate-600 text-white font-medium text-xs sm:text-sm px-3 py-2 rounded-lg transition-all flex items-center gap-1.5">
+          <i class="fa-solid fa-print"></i>
+          <span>Imprimir / PDF</span>
+        </button>
+        <button id="btn-export-csv" class="bg-slate-700 hover:bg-slate-600 text-white font-medium text-xs sm:text-sm px-3 py-2 rounded-lg transition-all flex items-center gap-1.5" title="Exportar datos a CSV para Excel">
+          <i class="fa-solid fa-file-csv"></i>
+          <span>Excel</span>
+        </button>
+        <button id="btn-backup-json" class="bg-slate-700 hover:bg-slate-600 text-white font-medium text-xs sm:text-sm px-3 py-2 rounded-lg transition-all flex items-center gap-1.5" title="Descargar copia de seguridad completa">
+          <i class="fa-solid fa-download"></i>
+          <span>Copia Seguridad</span>
+        </button>
+        <button id="btn-clear-table" class="bg-red-800/80 hover:bg-red-700 text-white font-medium text-xs sm:text-sm px-3 py-2 rounded-lg transition-all flex items-center gap-1.5" title="Restablecer planilla">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Panel de Métricas Rápidas -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-5 print-container">
+    
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 no-print">
+      <div class="bg-white p-3.5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-medium text-slate-500 uppercase">Total Plantas</p>
+          <p id="stat-total" class="text-xl font-bold text-slate-800">0</p>
+        </div>
+        <i class="fa-solid fa-cannabis text-cultivo-600 text-2xl bg-cultivo-50 p-2.5 rounded-lg"></i>
+      </div>
+      <div class="bg-white p-3.5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-medium text-slate-500 uppercase">De Semilla</p>
+          <p id="stat-semilla" class="text-xl font-bold text-slate-800">0</p>
+        </div>
+        <i class="fa-solid fa-circle-dot text-amber-600 text-2xl bg-amber-50 p-2.5 rounded-lg"></i>
+      </div>
+      <div class="bg-white p-3.5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-medium text-slate-500 uppercase">De Esqueje</p>
+          <p id="stat-esqueje" class="text-xl font-bold text-slate-800">0</p>
+        </div>
+        <i class="fa-solid fa-scissors text-blue-600 text-2xl bg-blue-50 p-2.5 rounded-lg"></i>
+      </div>
+      <div class="bg-white p-3.5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-medium text-slate-500 uppercase">Automáticas</p>
+          <p id="stat-auto" class="text-xl font-bold text-slate-800">0</p>
+        </div>
+        <i class="fa-solid fa-clock-rotate-left text-purple-600 text-2xl bg-purple-50 p-2.5 rounded-lg"></i>
+      </div>
+    </div>
+
+    <!-- Encabezado para Impresión (Sólo visible al imprimir) -->
+    <div class="hidden print:block mb-4 border-b-2 border-slate-900 pb-2">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 class="text-xl font-black uppercase text-slate-900 tracking-wider">Planilla de Seguimiento de Cultivo</h1>
+          <p class="text-xs text-slate-600">Registro de Germinación, Esquejes, Riegos y Nutrición</p>
+        </div>
+        <div class="text-right text-xs">
+          <p><strong>Fecha Impresión:</strong> <span id="print-date"></span></p>
+          <p><strong>Ciclo / Sala:</strong> ________________________</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contenedor de la Tabla con cabeceras y columnas ancladas -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+      <div class="overflow-x-auto custom-scrollbar">
+        <table class="w-full text-left text-xs text-slate-700 border-collapse min-w-[1280px]">
+          <!-- Encabezados de Columna con diseño anclado -->
+          <thead>
+            <tr class="bg-slate-800 text-white uppercase text-[11px] font-semibold tracking-wider text-center select-none">
+              <th scope="col" class="py-3 px-2 w-20 min-w-[70px] border-r border-slate-700 text-center">
+                # / ID<br><span class="text-[9px] text-amber-300 font-normal">Letra / N°</span>
+              </th>
+              <th scope="col" class="py-3.5 px-3 min-w-[140px] border-r border-slate-700 text-left">
+                1er Día Enterrada<br><span class="text-[9px] text-slate-300 font-normal">Fecha de Inicio</span>
+              </th>
+              <th scope="col" class="py-3.5 px-2.5 min-w-[160px] border-r border-slate-700">
+                Semilla<br><span class="text-[9px] text-amber-300 font-normal">¿Es de semilla?</span>
+              </th>
+              <th scope="col" class="py-3.5 px-2.5 min-w-[160px] border-r border-slate-700">
+                Esqueje<br><span class="text-[9px] text-sky-300 font-normal">¿Es de esqueje?</span>
+              </th>
+              <th scope="col" class="py-3.5 px-3 min-w-[160px] border-r border-slate-700 sticky-col-header bg-slate-800 text-left shadow-r">
+                Nombre Planta<br><span class="text-[9px] text-cultivo-300 font-normal">Variedad / Genética</span>
+              </th>
+              <th scope="col" class="py-3.5 px-3 min-w-[150px] border-r border-slate-700">
+                Tipo<br><span class="text-[9px] text-slate-300 font-normal">Automática / Regular / Fem</span>
+              </th>
+              <th scope="col" class="py-3 px-3 min-w-[210px] border-r border-slate-700 bg-emerald-950/70">
+                Enraizante / Inicio<br><span class="text-[9px] text-emerald-300 font-normal">Múltiples riegos (+)</span>
+              </th>
+              <th scope="col" class="py-3 px-3 min-w-[210px] border-r border-slate-700 bg-teal-950/70">
+                Vegetativo<br><span class="text-[9px] text-teal-300 font-normal">Múltiples riegos (+)</span>
+              </th>
+              <th scope="col" class="py-3 px-3 min-w-[210px] border-r border-slate-700 bg-amber-950/70">
+                Floración<br><span class="text-[9px] text-amber-300 font-normal">Múltiples riegos (+)</span>
+              </th>
+              <th scope="col" class="py-3.5 px-2.5 min-w-[140px] border-r border-slate-700 text-left">
+                Observaciones
+              </th>
+              <th scope="col" class="py-3.5 px-2 w-16 no-print">Acción</th>
+            </tr>
+          </thead>
+          <tbody id="cultivo-table-body" class="divide-y divide-slate-200">
+            <!-- Las filas se cargan dinámicamente con JavaScript -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pie de tabla / Información de uso -->
+      <div class="p-3 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between text-xs text-slate-500 gap-2 no-print">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-cloud-check text-cultivo-600 text-sm"></i>
+          <span>Los datos se guardan automáticamente en tu navegador. Puedes agregar tantas filas como necesites.</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btn-add-sample" class="text-cultivo-700 hover:text-cultivo-900 font-semibold underline text-xs">
+            + Cargar ejemplos típicos
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Guía rápida de parámetros -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 no-print text-xs text-slate-600 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+      <div class="flex items-start gap-3">
+        <div class="p-2 bg-emerald-100 text-emerald-800 rounded-lg"><i class="fa-solid fa-seedling"></i></div>
+        <div>
+          <h4 class="font-bold text-slate-800 text-sm">Enraizante</h4>
+          <p>Ideal en primeros 7 a 14 días. Mantener pH 5.8 - 6.2 y EC baja (0.4 - 0.8 mS/cm) para no saturar las raíces jóvenes.</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-3">
+        <div class="p-2 bg-teal-100 text-teal-800 rounded-lg"><i class="fa-solid fa-leaf"></i></div>
+        <div>
+          <h4 class="font-bold text-slate-800 text-sm">Vegetativo</h4>
+          <p>Nutrición rica en Nitrógeno (N). Subir EC paulatinamente (1.0 - 1.6 mS/cm). pH óptimo 6.0 - 6.4 en sustrato.</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-3">
+        <div class="p-2 bg-amber-100 text-amber-800 rounded-lg"><i class="fa-solid fa-sun"></i></div>
+        <div>
+          <h4 class="font-bold text-slate-800 text-sm">Floración</h4>
+          <p>Aporte alto de Fósforo (P) y Potasio (K). EC hasta 1.6 - 2.2 mS/cm. Reducir fertilizantes 10 días antes del corte.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal / Toast de Notificación -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 text-sm border border-slate-700 pointer-events-none">
+    <i id="toast-icon" class="fa-solid fa-circle-check text-cultivo-400 text-lg"></i>
+    <span id="toast-message">Operación realizada con éxito</span>
+  </div>
+
+  <!-- Input oculto para restaurar backup -->
+  <input type="file" id="file-backup-input" accept=".json" class="hidden">
+
+  <!-- Lógica de la Aplicación (versión local, sin nube) -->
+  <script>
+    const STORAGE_KEY = 'mi_cultivo_data_v1';
+
+    const INITIAL_ROWS = [
+      {
+        id: 'c1',
+        codigo: 'A',
+        fecha: new Date().toISOString().split('T')[0],
+        esSemilla: true,
+        esEsqueje: false,
+        nombre: 'Planta #1',
+        tipo: 'Automatica',
+        enraizante: [
+          { dia: 'Día 1', producto: 'Enraizante', ph: '6.0', ec: '0.6' }
+        ],
+        vegetativo: [],
+        floracion: [],
+        notas: ''
+      }
+    ];
+
+    let cultivoData = [];
+
+    function loadData() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          cultivoData = JSON.parse(saved);
+        } else {
+          cultivoData = JSON.parse(JSON.stringify(INITIAL_ROWS));
+        }
+      } catch (e) {
+        cultivoData = JSON.parse(JSON.stringify(INITIAL_ROWS));
+      }
+      normalizeData();
+    }
+
+    function normalizeData() {
+      cultivoData.forEach(row => {
+        ['enraizante', 'vegetativo', 'floracion'].forEach(stage => {
+          if (!Array.isArray(row[stage])) {
+            row[stage] = [];
+          }
+        });
+      });
+      updateStats();
+    }
+
+    function saveData() {
+      updateStats();
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(cultivoData));
+        setSyncStatus('Guardado en el teléfono', 'bg-cultivo-600', 'text-white');
+      } catch (e) {
+        setSyncStatus('Error al guardar', 'bg-red-700', 'text-white');
+      }
+    }
+
+    function setSyncStatus(text, bgClass, textClass) {
+      const statusBadge = document.getElementById('cloud-sync-status');
+      const syncText = document.getElementById('sync-text');
+      if (statusBadge && syncText) {
+        syncText.innerText = text;
+        statusBadge.className = `text-xs font-medium ${bgClass} ${textClass} px-2.5 py-0.5 rounded-full border border-cultivo-500 flex items-center gap-1.5 transition-all`;
+      }
+    }
+
+    function showNotification(message, icon = 'fa-circle-check', colorClass = 'text-cultivo-400') {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toast-message');
+      const toastIcon = document.getElementById('toast-icon');
+
+      toastMsg.innerText = message;
+      toastIcon.className = `fa-solid ${icon} ${colorClass} text-lg`;
+
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 2500);
+    }
+
+    function updateStats() {
+      const totalEl = document.getElementById('stat-total');
+      if (totalEl) totalEl.innerText = cultivoData.length;
+      const semEl = document.getElementById('stat-semilla');
+      if (semEl) semEl.innerText = cultivoData.filter(d => d.esSemilla).length;
+      const esqEl = document.getElementById('stat-esqueje');
+      if (esqEl) esqEl.innerText = cultivoData.filter(d => d.esEsqueje).length;
+      const autoEl = document.getElementById('stat-auto');
+      if (autoEl) autoEl.innerText = cultivoData.filter(d => d.tipo === 'Automatica').length;
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('cultivo-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      if (cultivoData.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="11" class="py-12 text-center text-slate-400">
+              <i class="fa-solid fa-seedling text-4xl text-slate-300 mb-3 block"></i>
+              <p class="font-medium text-slate-600 text-sm">No hay plantas registradas en la planilla</p>
+              <p class="text-xs text-slate-400 mb-4">Haz clic en el botón superior para agregar tu primera planta.</p>
+              <button id="btn-empty-add" class="bg-cultivo-600 hover:bg-cultivo-700 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow inline-flex items-center gap-2">
+                <i class="fa-solid fa-plus"></i> Agregar Planta
+              </button>
+            </td>
+          </tr>
+        `;
+        document.getElementById('btn-empty-add')?.addEventListener('click', addRow);
+        updateStats();
+        return;
+      }
+
+      cultivoData.forEach((row, index) => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition-colors border-b border-slate-200 group align-top";
+        tr.dataset.id = row.id;
+
+        const renderFertCell = (stage, color, labelText) => {
+          const apps = Array.isArray(row[stage]) ? row[stage] : [];
+          
+          let cardsHtml = '';
+          if (apps.length === 0) {
+            cardsHtml = `
+              <div class="py-3 px-2 text-center text-slate-400 border border-dashed border-${color}-200 rounded-lg bg-${color}-50/30">
+                <span class="text-[11px] block text-slate-500">Sin riegos aún</span>
+              </div>
+            `;
+          } else {
+            cardsHtml = apps.map((app, appIdx) => `
+              <div class="fert-app-card space-y-1 bg-white p-2 rounded-lg border border-${color}-200 shadow-sm relative group/app">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-1 mb-1">
+                  <span class="text-[10px] font-bold text-${color}-800 flex items-center gap-1">
+                    <i class="fa-solid fa-droplet text-[9px]"></i> Riego #${appIdx + 1}
+                  </span>
+                  <button type="button" 
+                          data-remove-fert="${row.id}|${stage}|${appIdx}"
+                          title="Eliminar este riego" 
+                          class="no-print text-slate-300 hover:text-red-500 transition p-0.5 text-xs">
+                    <i class="fa-solid fa-circle-xmark"></i>
+                  </button>
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="text-[9px] font-bold text-slate-500 w-8">Día:</span>
+                  <input type="text" value="${escapeHtml(app.dia || '')}" 
+                         placeholder="Día 14 / Fecha"
+                         data-fert-field="${row.id}|${stage}|${appIdx}|dia"
+                         class="w-full text-[10px] px-1.5 py-0.5 border border-slate-200 rounded bg-white focus:ring-1 focus:ring-cultivo-500 focus:outline-none print-cell-input">
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="text-[9px] font-bold text-slate-500 w-8">Prod:</span>
+                  <input type="text" value="${escapeHtml(app.producto || '')}" 
+                         placeholder="Producto / Dosis"
+                         data-fert-field="${row.id}|${stage}|${appIdx}|producto"
+                         class="w-full text-[10px] px-1.5 py-0.5 border border-slate-200 rounded bg-white focus:ring-1 focus:ring-cultivo-500 focus:outline-none print-cell-input">
+                </div>
+                <div class="grid grid-cols-2 gap-1 pt-0.5">
+                  <div class="flex items-center gap-1">
+                    <span class="text-[9px] font-bold text-slate-500">pH:</span>
+                    <input type="text" value="${escapeHtml(app.ph || '')}" 
+                           placeholder="6.2"
+                           data-fert-field="${row.id}|${stage}|${appIdx}|ph"
+                           class="w-full text-[10px] px-1 py-0.5 border border-slate-200 rounded bg-white text-center font-mono focus:ring-1 focus:ring-cultivo-500 focus:outline-none print-cell-input">
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <span class="text-[9px] font-bold text-slate-500">EC:</span>
+                    <input type="text" value="${escapeHtml(app.ec || '')}" 
+                           placeholder="1.2"
+                           data-fert-field="${row.id}|${stage}|${appIdx}|ec"
+                           class="w-full text-[10px] px-1 py-0.5 border border-slate-200 rounded bg-white text-center font-mono focus:ring-1 focus:ring-cultivo-500 focus:outline-none print-cell-input">
+                  </div>
+                </div>
+              </div>
+            `).join('');
+          }
+
+          return `
+            <div class="space-y-1.5 min-w-[195px] max-w-[240px]">
+              <div class="space-y-1.5 max-h-[380px] overflow-y-auto custom-scrollbar pr-0.5">
+                ${cardsHtml}
+              </div>
+              <button type="button" 
+                      data-add-fert="${row.id}|${stage}"
+                      class="no-print w-full text-center text-[10px] font-semibold py-1.5 px-2 rounded-md border border-${color}-300 bg-${color}-50/80 hover:bg-${color}-100 text-${color}-900 transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95">
+                <i class="fa-solid fa-plus text-[9px]"></i>
+                <span>+ Riego ${labelText}</span>
+              </button>
+            </div>
+          `;
+        };
+
+        tr.innerHTML = `
+          <!-- # / ID editable -->
+          <td class="py-2.5 px-1.5 text-center border-r border-slate-200 bg-slate-50/70">
+            <input type="text" 
+                   value="${escapeHtml(row.codigo !== undefined ? row.codigo : String(index + 1))}" 
+                   placeholder="A / 1"
+                   data-field="${row.id}|codigo"
+                   class="w-full text-center font-bold text-xs px-1.5 py-1.5 border border-slate-300 rounded-md bg-white text-slate-800 focus:ring-2 focus:ring-cultivo-500 focus:outline-none print-cell-input uppercase">
+          </td>
+
+          <!-- 1er Día Enterrada / Fecha -->
+          <td class="py-2.5 px-3 border-r border-slate-200">
+            <input type="date" value="${row.fecha || ''}" 
+                   data-field="${row.id}|fecha"
+                   class="text-xs px-2 py-1 border border-slate-300 rounded-md bg-white focus:ring-1 focus:ring-cultivo-500 focus:outline-none font-mono print-cell-input">
+          </td>
+
+          <!-- Semilla: Casillero SI / NO -->
+          <td class="py-2.5 px-2 border-r border-slate-200 text-center">
+            <div class="inline-flex rounded-lg border border-slate-300 bg-slate-100 p-0.5 text-xs">
+              <button type="button" 
+                      data-origin="${row.id}|semilla|true"
+                      class="cursor-pointer px-2.5 py-1 rounded-md transition-all font-semibold ${row.esSemilla ? 'bg-amber-500 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}">
+                SÍ
+              </button>
+              <button type="button" 
+                      data-origin="${row.id}|semilla|false"
+                      class="cursor-pointer px-2.5 py-1 rounded-md transition-all font-semibold ${!row.esSemilla ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}">
+                NO
+              </button>
+            </div>
+            <span class="hidden print:inline-block font-mono text-[11px] mt-1">[${row.esSemilla ? 'X' : ' '}] SÍ  [${!row.esSemilla ? 'X' : ' '}] NO</span>
+          </td>
+
+          <!-- Esqueje: Casillero SI / NO -->
+          <td class="py-2.5 px-2 border-r border-slate-200 text-center">
+            <div class="inline-flex rounded-lg border border-slate-300 bg-slate-100 p-0.5 text-xs">
+              <button type="button" 
+                      data-origin="${row.id}|esqueje|true"
+                      class="cursor-pointer px-2.5 py-1 rounded-md transition-all font-semibold ${row.esEsqueje ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}">
+                SÍ
+              </button>
+              <button type="button" 
+                      data-origin="${row.id}|esqueje|false"
+                      class="cursor-pointer px-2.5 py-1 rounded-md transition-all font-semibold ${!row.esEsqueje ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}">
+                NO
+              </button>
+            </div>
+            <span class="hidden print:inline-block font-mono text-[11px] mt-1">[${row.esEsqueje ? 'X' : ' '}] SÍ  [${!row.esEsqueje ? 'X' : ' '}] NO</span>
+          </td>
+
+          <!-- Nombre Planta -->
+          <td class="py-2.5 px-3 border-r border-slate-200 sticky-col-cell bg-white group-hover:bg-slate-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+            <input type="text" value="${escapeHtml(row.nombre || '')}" 
+                   placeholder="Ej: Planta #1"
+                   data-field="${row.id}|nombre"
+                   class="w-full text-xs font-semibold text-slate-800 px-2.5 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-cultivo-500 focus:outline-none bg-white">
+          </td>
+
+          <!-- Tipo -->
+          <td class="py-2.5 px-2.5 border-r border-slate-200">
+            <select data-field="${row.id}|tipo"
+                    class="w-full text-xs px-2 py-1.5 border border-slate-300 rounded-md bg-white focus:ring-1 focus:ring-cultivo-500 focus:outline-none font-medium text-slate-700">
+              <option value="Automatica" ${row.tipo === 'Automatica' ? 'selected' : ''}>🌱 Automática</option>
+              <option value="Fotoperiodica" ${row.tipo === 'Fotoperiodica' ? 'selected' : ''}>☀️ Fotoperiódica / Fem</option>
+              <option value="Regular" ${row.tipo === 'Regular' ? 'selected' : ''}>🌿 Regular</option>
+            </select>
+          </td>
+
+          <!-- Fertilizante Enraizante -->
+          <td class="py-2 px-2.5 border-r border-slate-200 bg-emerald-50/20">
+            ${renderFertCell('enraizante', 'emerald', 'Inicio')}
+          </td>
+
+          <!-- Fertilizante Vegetativo -->
+          <td class="py-2 px-2.5 border-r border-slate-200 bg-teal-50/20">
+            ${renderFertCell('vegetativo', 'teal', 'Veg')}
+          </td>
+
+          <!-- Fertilizante Floración -->
+          <td class="py-2 px-2.5 border-r border-slate-200 bg-amber-50/20">
+            ${renderFertCell('floracion', 'amber', 'Flora')}
+          </td>
+
+          <!-- Observaciones -->
+          <td class="py-2 px-2.5 border-r border-slate-200">
+            <textarea rows="3" 
+                      placeholder="Poda, plagas, trasplante..."
+                      data-field="${row.id}|notas"
+                      class="w-full text-[11px] p-1.5 border border-slate-300 rounded-md resize-none bg-white focus:ring-1 focus:ring-cultivo-500 focus:outline-none leading-tight">${escapeHtml(row.notas || '')}</textarea>
+          </td>
+
+          <!-- Acciones de Fila -->
+          <td class="py-2 px-2 text-center no-print">
+            <div class="flex items-center justify-center gap-1">
+              <button data-duplicate="${row.id}" title="Duplicar planta" class="p-1.5 text-slate-400 hover:text-cultivo-600 rounded hover:bg-cultivo-50 transition">
+                <i class="fa-regular fa-copy"></i>
+              </button>
+              <button data-delete="${row.id}" title="Eliminar fila" class="p-1.5 text-slate-400 hover:text-red-600 rounded hover:bg-red-50 transition">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          </td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+
+      attachTableListeners();
+      updateStats();
+    }
+
+    function escapeHtml(string) {
+      if (!string) return '';
+      return String(string)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function attachTableListeners() {
+      document.querySelectorAll('[data-field]').forEach(input => {
+        input.addEventListener('change', (e) => {
+          const [id, field] = e.target.dataset.field.split('|');
+          const row = cultivoData.find(item => item.id === id);
+          if (row) {
+            row[field] = e.target.value;
+            saveData();
+          }
+        });
+      });
+
+      document.querySelectorAll('[data-origin]').forEach(button => {
+        button.addEventListener('click', (e) => {
+          const [id, originType, valStr] = button.dataset.origin.split('|');
+          const row = cultivoData.find(item => item.id === id);
+          if (!row) return;
+
+          const val = valStr === 'true';
+          if (originType === 'semilla') {
+            row.esSemilla = val;
+            if (val) row.esEsqueje = false;
+          } else {
+            row.esEsqueje = val;
+            if (val) row.esSemilla = false;
+          }
+          saveData();
+          renderTable();
+          showNotification(val ? `Marcado como ${originType.toUpperCase()}` : 'Opción actualizada');
+        });
+      });
+
+      document.querySelectorAll('[data-fert-field]').forEach(input => {
+        input.addEventListener('change', (e) => {
+          const [id, stage, appIdx, field] = e.target.dataset.fertField.split('|');
+          const row = cultivoData.find(item => item.id === id);
+          if (row && Array.isArray(row[stage]) && row[stage][appIdx]) {
+            row[stage][appIdx][field] = e.target.value;
+            saveData();
+          }
+        });
+      });
+
+      document.querySelectorAll('[data-add-fert]').forEach(button => {
+        button.addEventListener('click', () => {
+          const [id, stage] = button.dataset.addFert.split('|');
+          const row = cultivoData.find(item => item.id === id);
+          if (!row) return;
+          if (!Array.isArray(row[stage])) row[stage] = [];
+
+          row[stage].push({
+            dia: `Riego ${row[stage].length + 1}`,
+            producto: '',
+            ph: '',
+            ec: ''
+          });
+          saveData();
+          renderTable();
+          showNotification(`Nuevo riego añadido a ${stage.toUpperCase()}`);
+        });
+      });
+
+      document.querySelectorAll('[data-remove-fert]').forEach(button => {
+        button.addEventListener('click', () => {
+          const [id, stage, appIdx] = button.dataset.removeFert.split('|');
+          const row = cultivoData.find(item => item.id === id);
+          if (row && Array.isArray(row[stage])) {
+            row[stage].splice(Number(appIdx), 1);
+            saveData();
+            renderTable();
+            showNotification('Riego eliminado', 'fa-trash-can', 'text-amber-400');
+          }
+        });
+      });
+
+      document.querySelectorAll('[data-duplicate]').forEach(button => {
+        button.addEventListener('click', () => {
+          const id = button.dataset.duplicate;
+          const source = cultivoData.find(item => item.id === id);
+          if (!source) return;
+
+          const dup = JSON.parse(JSON.stringify(source));
+          dup.id = 'c_' + Date.now();
+          dup.codigo = `${source.codigo || ''}-copia`;
+          dup.nombre = `${source.nombre} (Copia)`;
+          cultivoData.push(dup);
+          saveData();
+          renderTable();
+          showNotification('Planta duplicada');
+        });
+      });
+
+      document.querySelectorAll('[data-delete]').forEach(button => {
+        button.addEventListener('click', () => {
+          const id = button.dataset.delete;
+          const idx = cultivoData.findIndex(item => item.id === id);
+          if (idx > -1) {
+            cultivoData.splice(idx, 1);
+            saveData();
+            renderTable();
+            showNotification('Planta eliminada', 'fa-trash-can', 'text-amber-400');
+          }
+        });
+      });
+    }
+
+    function addRow() {
+      const newRow = {
+        id: 'c_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+        codigo: String(cultivoData.length + 1),
+        fecha: new Date().toISOString().split('T')[0],
+        esSemilla: true,
+        esEsqueje: false,
+        nombre: `Planta #${cultivoData.length + 1}`,
+        tipo: 'Automatica',
+        enraizante: [{ dia: 'Día 1', producto: '', ph: '', ec: '' }],
+        vegetativo: [],
+        floracion: [],
+        notas: ''
+      };
+      cultivoData.push(newRow);
+      saveData();
+      renderTable();
+      showNotification('Nueva planta agregada');
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }
+
+    function downloadBackup() {
+      const backupData = {
+        version: "1.0",
+        exportDate: new Date().toISOString(),
+        rows: cultivoData
+      };
+      const jsonStr = JSON.stringify(backupData, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `backup_cultivo_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      showNotification('Copia de seguridad guardada', 'fa-floppy-disk');
+    }
+
+    function exportToCSV() {
+      if (cultivoData.length === 0) {
+        showNotification('No hay datos para exportar', 'fa-triangle-exclamation', 'text-amber-400');
+        return;
+      }
+      const headers = ['# / ID', 'Fecha Inicio', 'De Semilla', 'De Esqueje', 'Nombre Planta', 'Tipo', 'Riegos Enraizante', 'Riegos Vegetativo', 'Riegos Floracion', 'Observaciones'];
+      const formatApps = (apps) => {
+        if (!Array.isArray(apps) || apps.length === 0) return 'Sin riegos';
+        return apps.map((a, i) => `[#${i + 1} ${a.dia || 'S/D'}: ${a.producto || 'S/P'} (pH ${a.ph || '-'} / EC ${a.ec || '-'})]`).join(' | ');
+      };
+      const csvRows = [headers.join(';')];
+      cultivoData.forEach((row, idx) => {
+        const sanitize = (val) => `"${String(val || '').replace(/"/g, '""')}"`;
+        const line = [
+          sanitize(row.codigo !== undefined ? row.codigo : idx + 1),
+          sanitize(row.fecha),
+          row.esSemilla ? 'SI' : 'NO',
+          row.esEsqueje ? 'SI' : 'NO',
+          sanitize(row.nombre),
+          sanitize(row.tipo),
+          sanitize(formatApps(row.enraizante)),
+          sanitize(formatApps(row.vegetativo)),
+          sanitize(formatApps(row.floracion)),
+          sanitize(row.notas)
+        ];
+        csvRows.push(line.join(';'));
+      });
+      const blob = new Blob(["\uFEFF" + csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `seguimiento_cultivo_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showNotification('Planilla CSV descargada con éxito');
+    }
+
+    document.getElementById('btn-copy-app-code')?.remove();
+    document.getElementById('btn-install-app')?.remove();
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadData();
+      renderTable();
+      setSyncStatus('Guardado en el teléfono', 'bg-cultivo-600', 'text-white');
+
+      const today = new Date().toLocaleDateString('es-ES', {
+        day: '2-digit', month: '2-digit', year: 'numeric'
+      });
+      const printDateEl = document.getElementById('print-date');
+      if (printDateEl) printDateEl.innerText = today;
+
+      document.getElementById('btn-add-row')?.addEventListener('click', addRow);
+      document.getElementById('btn-print-sheet')?.addEventListener('click', () => window.print());
+      document.getElementById('btn-export-csv')?.addEventListener('click', exportToCSV);
+      document.getElementById('btn-backup-json')?.addEventListener('click', downloadBackup);
+
+      document.getElementById('btn-clear-table')?.addEventListener('click', () => {
+        if (cultivoData.length === 0) return;
+        cultivoData = [];
+        saveData();
+        renderTable();
+        showNotification('Planilla vaciada. Puedes añadir nuevas plantas.', 'fa-circle-info', 'text-sky-400');
+      });
+
+      document.getElementById('btn-add-sample')?.addEventListener('click', () => {
+        cultivoData = JSON.parse(JSON.stringify(INITIAL_ROWS));
+        saveData();
+        renderTable();
+        showNotification('Ejemplos restaurados');
+      });
+    });
+  </script>
+</body>
+</html>
