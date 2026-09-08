@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../firebaseAdmin';
 import { deleteCollection } from '../lib/deleteCollection';
+import { AuthedRequest } from '../middleware/auth';
 import wateringsRouter from './waterings';
 import photosRouter from './photos';
 
@@ -8,9 +9,9 @@ const router = Router();
 
 const ETAPAS = ['Enraizado', 'Vegetativo', 'Floración', 'Secado', 'Curado'];
 
-/** GET /api/plants — lista todas las plantas. Filtro opcional ?tentId=xxx */
-router.get('/', async (req, res) => {
-  let query: FirebaseFirestore.Query = db.collection('plants');
+/** GET /api/plants — lista las plantas DEL USUARIO. Filtro opcional ?tentId=xxx */
+router.get('/', async (req: AuthedRequest, res) => {
+  let query: FirebaseFirestore.Query = db.collection('plants').where('ownerId', '==', req.uid);
   if (req.query.tentId) {
     query = query.where('tentId', '==', req.query.tentId as string);
   }
@@ -18,8 +19,8 @@ router.get('/', async (req, res) => {
   res.json(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
 });
 
-/** POST /api/plants — crea una planta (opcionalmente ya asignada a una carpa). */
-router.post('/', async (req, res) => {
+/** POST /api/plants — crea una planta propia (opcionalmente ya asignada a una carpa propia). */
+router.post('/', async (req: AuthedRequest, res) => {
   const { nombre, genetica, tentId, fecha, etapa, notas } = req.body || {};
   if (!nombre || typeof nombre !== 'string') {
     res.status(400).json({ error: 'nombre es requerido' });
@@ -29,9 +30,17 @@ router.post('/', async (req, res) => {
     res.status(400).json({ error: `etapa inválida, debe ser una de: ${ETAPAS.join(', ')}` });
     return;
   }
+  if (tentId) {
+    const tentDoc = await db.collection('tents').doc(tentId).get();
+    if (!tentDoc.exists || tentDoc.data()?.ownerId !== req.uid) {
+      res.status(400).json({ error: 'La carpa indicada no existe o no te pertenece' });
+      return;
+    }
+  }
   const now = new Date().toISOString();
   const doc = {
     nombre,
+    ownerId: req.uid,
     genetica: genetica || '',
     tentId: tentId || null,
     fecha: fecha || now.split('T')[0],
@@ -44,17 +53,17 @@ router.post('/', async (req, res) => {
   res.status(201).json({ id: ref.id, ...doc });
 });
 
-/** GET /api/plants/:id — detalle con riegos, fotos y cosecha si la tiene. */
-router.get('/:id', async (req, res) => {
+/** GET /api/plants/:id — detalle con riegos, fotos y cosecha si la tiene (solo si es propia). */
+router.get('/:id', async (req: AuthedRequest, res) => {
   const doc = await db.collection('plants').doc(req.params.id).get();
-  if (!doc.exists) {
+  if (!doc.exists || doc.data()?.ownerId !== req.uid) {
     res.status(404).json({ error: 'Planta no encontrada' });
     return;
   }
   const [wateringsSnap, photosSnap, harvestsSnap] = await Promise.all([
     db.collection('plants').doc(req.params.id).collection('waterings').orderBy('fecha', 'desc').get(),
     db.collection('plants').doc(req.params.id).collection('photos').orderBy('fecha', 'desc').get(),
-    db.collection('harvests').where('plantId', '==', req.params.id).get(),
+    db.collection('harvests').where('plantId', '==', req.params.id).where('ownerId', '==', req.uid).get(),
   ]);
   res.json({
     id: doc.id,
@@ -66,14 +75,14 @@ router.get('/:id', async (req, res) => {
 });
 
 /**
- * PUT /api/plants/:id — edita cualquier campo de la planta, incluyendo
- * `tentId` para MOVERLA de una carpa a otra. Esto es lo único que hace
- * falta para reasignar carpa: el modal de edición manda el nuevo tentId acá.
+ * PUT /api/plants/:id — edita cualquier campo de una planta propia, incluyendo
+ * `tentId` para MOVERLA de una carpa a otra (la carpa destino también debe
+ * ser propia).
  */
-router.put('/:id', async (req, res) => {
+router.put('/:id', async (req: AuthedRequest, res) => {
   const ref = db.collection('plants').doc(req.params.id);
   const doc = await ref.get();
-  if (!doc.exists) {
+  if (!doc.exists || doc.data()?.ownerId !== req.uid) {
     res.status(404).json({ error: 'Planta no encontrada' });
     return;
   }
@@ -81,6 +90,13 @@ router.put('/:id', async (req, res) => {
   if (etapa && !ETAPAS.includes(etapa)) {
     res.status(400).json({ error: `etapa inválida, debe ser una de: ${ETAPAS.join(', ')}` });
     return;
+  }
+  if (tentId) {
+    const tentDoc = await db.collection('tents').doc(tentId).get();
+    if (!tentDoc.exists || tentDoc.data()?.ownerId !== req.uid) {
+      res.status(400).json({ error: 'La carpa indicada no existe o no te pertenece' });
+      return;
+    }
   }
   const update: Record<string, unknown> = { actualizadoEn: new Date().toISOString() };
   if (nombre !== undefined) update.nombre = nombre;
@@ -94,11 +110,11 @@ router.put('/:id', async (req, res) => {
   res.json({ id: updated.id, ...updated.data() });
 });
 
-/** DELETE /api/plants/:id — borra la planta y en cascada sus riegos y fotos. */
-router.delete('/:id', async (req, res) => {
+/** DELETE /api/plants/:id — borra una planta propia y en cascada sus riegos y fotos. */
+router.delete('/:id', async (req: AuthedRequest, res) => {
   const ref = db.collection('plants').doc(req.params.id);
   const doc = await ref.get();
-  if (!doc.exists) {
+  if (!doc.exists || doc.data()?.ownerId !== req.uid) {
     res.status(404).json({ error: 'Planta no encontrada' });
     return;
   }
@@ -108,8 +124,18 @@ router.delete('/:id', async (req, res) => {
   res.status(204).send();
 });
 
+/** Exige que :plantId exista y pertenezca al usuario autenticado antes de tocar sus riegos/fotos. */
+async function requirePlantOwnership(req: AuthedRequest, res: import('express').Response, next: import('express').NextFunction) {
+  const doc = await db.collection('plants').doc(req.params.plantId).get();
+  if (!doc.exists || doc.data()?.ownerId !== req.uid) {
+    res.status(404).json({ error: 'Planta no encontrada' });
+    return;
+  }
+  next();
+}
+
 // Subrutas anidadas: /api/plants/:plantId/waterings, /api/plants/:plantId/photos
-router.use('/:plantId/waterings', wateringsRouter);
-router.use('/:plantId/photos', photosRouter);
+router.use('/:plantId/waterings', requirePlantOwnership, wateringsRouter);
+router.use('/:plantId/photos', requirePlantOwnership, photosRouter);
 
 export default router;

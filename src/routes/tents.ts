@@ -1,19 +1,20 @@
 import { Router } from 'express';
 import { db } from '../firebaseAdmin';
 import { deleteCollection } from '../lib/deleteCollection';
+import { AuthedRequest } from '../middleware/auth';
 
 const router = Router();
 
 /**
  * GET /api/tents
- * Lista todas las carpas con sus plantas embebidas (las que ya están cargadas
- * en el sistema) y el último snapshot ambiental — así el dashboard puede
- * agrupar todo por carpa en una sola llamada.
+ * Lista las carpas DEL USUARIO AUTENTICADO (ownerId === req.uid), con sus
+ * plantas embebidas y el último snapshot ambiental — así el dashboard puede
+ * agrupar todo por carpa en una sola llamada. Cada usuario ve solo lo suyo.
  */
-router.get('/', async (_req, res) => {
+router.get('/', async (req: AuthedRequest, res) => {
   const [tentsSnap, plantsSnap] = await Promise.all([
-    db.collection('tents').orderBy('creadoEn', 'asc').get(),
-    db.collection('plants').get(),
+    db.collection('tents').where('ownerId', '==', req.uid).get(),
+    db.collection('plants').where('ownerId', '==', req.uid).get(),
   ]);
 
   const plantsByTent = new Map<string, any[]>();
@@ -24,16 +25,18 @@ router.get('/', async (_req, res) => {
     plantsByTent.set(data.tentId, list);
   });
 
-  const tents = tentsSnap.docs.map((doc) => {
-    const data = doc.data();
-    return { id: doc.id, ...data, plants: plantsByTent.get(doc.id) || [] };
-  });
+  const tents = tentsSnap.docs
+    .map((doc) => {
+      const data = doc.data();
+      return { id: doc.id, ...data, plants: plantsByTent.get(doc.id) || [] };
+    })
+    .sort((a: any, b: any) => (a.creadoEn || '').localeCompare(b.creadoEn || ''));
 
   res.json(tents);
 });
 
-/** POST /api/tents — crea una carpa nueva. */
-router.post('/', async (req, res) => {
+/** POST /api/tents — crea una carpa nueva, propiedad del usuario autenticado. */
+router.post('/', async (req: AuthedRequest, res) => {
   const { nombre, notas, dimensiones, tipoLuz, extraccion } = req.body || {};
   if (!nombre || typeof nombre !== 'string') {
     res.status(400).json({ error: 'nombre es requerido' });
@@ -42,6 +45,7 @@ router.post('/', async (req, res) => {
   const now = new Date().toISOString();
   const doc = {
     nombre,
+    ownerId: req.uid,
     notas: notas || '',
     dimensiones: dimensiones || '',
     tipoLuz: tipoLuz || '',
@@ -54,15 +58,15 @@ router.post('/', async (req, res) => {
   res.status(201).json({ id: ref.id, ...doc, plants: [] });
 });
 
-/** GET /api/tents/:id — detalle de una carpa: datos, plantas e historial ambiental. */
-router.get('/:id', async (req, res) => {
+/** GET /api/tents/:id — detalle de una carpa propia: datos, plantas e historial ambiental. */
+router.get('/:id', async (req: AuthedRequest, res) => {
   const tentDoc = await db.collection('tents').doc(req.params.id).get();
-  if (!tentDoc.exists) {
+  if (!tentDoc.exists || tentDoc.data()?.ownerId !== req.uid) {
     res.status(404).json({ error: 'Carpa no encontrada' });
     return;
   }
   const [plantsSnap, envSnap] = await Promise.all([
-    db.collection('plants').where('tentId', '==', req.params.id).get(),
+    db.collection('plants').where('tentId', '==', req.params.id).where('ownerId', '==', req.uid).get(),
     db
       .collection('tents')
       .doc(req.params.id)
@@ -79,11 +83,11 @@ router.get('/:id', async (req, res) => {
   });
 });
 
-/** PUT /api/tents/:id — edita datos de la carpa (nombre, notas, dimensiones, etc). */
-router.put('/:id', async (req, res) => {
+/** PUT /api/tents/:id — edita datos de una carpa propia (nombre, notas, dimensiones, etc). */
+router.put('/:id', async (req: AuthedRequest, res) => {
   const ref = db.collection('tents').doc(req.params.id);
   const doc = await ref.get();
-  if (!doc.exists) {
+  if (!doc.exists || doc.data()?.ownerId !== req.uid) {
     res.status(404).json({ error: 'Carpa no encontrada' });
     return;
   }
@@ -100,14 +104,14 @@ router.put('/:id', async (req, res) => {
 });
 
 /** DELETE /api/tents/:id — borra la carpa, desasigna sus plantas y borra su historial ambiental. */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', async (req: AuthedRequest, res) => {
   const ref = db.collection('tents').doc(req.params.id);
   const doc = await ref.get();
-  if (!doc.exists) {
+  if (!doc.exists || doc.data()?.ownerId !== req.uid) {
     res.status(404).json({ error: 'Carpa no encontrada' });
     return;
   }
-  const plantsSnap = await db.collection('plants').where('tentId', '==', req.params.id).get();
+  const plantsSnap = await db.collection('plants').where('tentId', '==', req.params.id).where('ownerId', '==', req.uid).get();
   const batch = db.batch();
   plantsSnap.forEach((p) => batch.update(p.ref, { tentId: null }));
   await batch.commit();
@@ -121,10 +125,10 @@ router.delete('/:id', async (req, res) => {
  * humedad, luz, CO2) para ESTA carpa y actualiza el snapshot "ambiente" que
  * se ve en el home. El ambiente ya no es global: es por carpa.
  */
-router.post('/:id/environment', async (req, res) => {
+router.post('/:id/environment', async (req: AuthedRequest, res) => {
   const tentRef = db.collection('tents').doc(req.params.id);
   const tentDoc = await tentRef.get();
-  if (!tentDoc.exists) {
+  if (!tentDoc.exists || tentDoc.data()?.ownerId !== req.uid) {
     res.status(404).json({ error: 'Carpa no encontrada' });
     return;
   }
