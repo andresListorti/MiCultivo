@@ -95,9 +95,39 @@ in `index.html`), and (2) `fetch('/api/...')` calls with the Firebase ID
 token as `Authorization: Bearer <token>`. Every `/api/tents`, `/api/plants`,
 `/api/harvests` route is wrapped in `requireAuth` (`src/middleware/auth.ts`),
 which verifies that token server-side via the Admin SDK
-(`admin.auth().verifyIdToken`) — there are no per-route permission checks
-beyond "is this one of the two accounts," since the whole dataset is shared
-between Nacho and Pochi (no per-user scoping anywhere).
+(`admin.auth().verifyIdToken`) and sets `req.uid`.
+
+### Each account has its own isolated data (`ownerId`)
+
+Nacho and Pochi are **not** sharing one dataset — each `tents`, `plants`,
+and `harvests` document has an `ownerId` field (the Firebase Auth uid), set
+on creation and enforced on every read/write/delete:
+- List endpoints (`GET /api/tents`, `/api/plants`, `/api/harvests`) filter
+  by `where('ownerId', '==', req.uid)`.
+- Detail/edit/delete endpoints fetch the doc first and check
+  `doc.data().ownerId === req.uid`, returning **404** (not 403) if it
+  belongs to someone else, so ownership isn't leaked.
+- Creating a plant/harvest against a `tentId`/`plantId` that isn't your
+  own is rejected with 400 (checked in `src/routes/plants.ts` POST/PUT and
+  `src/routes/harvests.ts` POST).
+- Waterings/photos (subcollections of a plant) don't carry their own
+  `ownerId` — they inherit isolation from `requirePlantOwnership`, a
+  middleware in `src/routes/plants.ts` mounted in front of both
+  sub-routers, which 404s before the request ever reaches
+  `waterings.ts`/`photos.ts` if the parent plant isn't yours.
+- The `tents` list query deliberately does **not** use Firestore
+  `.orderBy()` (sorting happens in JS after fetching) — combining a
+  `where('ownerId', ...)` equality filter with an `orderBy` on a different
+  field would require a composite index. Multiple *equality-only* filters
+  (e.g. `ownerId` + `tentId`, `ownerId` + `plantId`) don't need one, which
+  is why those are fine as-is. Keep this in mind before adding any new
+  `orderBy` alongside a `where` — either add the composite index to
+  `firestore.indexes.json` and `firebase deploy --only firestore:indexes`
+  first, or sort in JS like the tents route does.
+
+`scripts/migrateOwnership.ts` was a one-off migration (already run) that
+stamped `ownerId` on all pre-existing docs, assigning them to Nacho — it's
+kept in the repo for reference but shouldn't need to run again.
 
 ### Data model (Firestore)
 
