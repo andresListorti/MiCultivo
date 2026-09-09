@@ -888,8 +888,13 @@
     function renderHomeByCarpa() {
       const renderedIds = new Set();
       let html = tentsData.map(t => {
-        const plants = (t.plants || []).filter(p => !renderedIds.has(p.id));
-        plants.forEach(p => renderedIds.add(p.id));
+        const seenInTent = new Set();
+        const plants = (t.plants || []).filter(p => {
+          const isDup = seenInTent.has(p.id) || renderedIds.has(p.id);
+          seenInTent.add(p.id);
+          renderedIds.add(p.id);
+          return !isDup;
+        });
         return renderTentSection(t, plants);
       }).join('');
       const orphan = plantsData.filter(p => (!p.tentId || !tentsData.find(t => t.id === p.tentId)) && !renderedIds.has(p.id));
@@ -1707,57 +1712,6 @@
       }
     };
 
-    // Actualizar el submit del formulario de plantas para incluir etapas y notificaciones
-    const plantFormElement = document.getElementById('plant-form');
-    const originalSubmitHandler = plantFormElement.onsubmit;
-    plantFormElement.addEventListener('submit', async function(e) {
-      if (e.defaultPrevented) return;
-      e.preventDefault();
-      const payload = {
-        nombre: document.getElementById('plant-form-nombre').value.trim(),
-        genetica: document.getElementById('plant-form-genetica').value.trim(),
-        tentId: document.getElementById('plant-form-tent').value || null,
-        fecha: document.getElementById('plant-form-fecha').value,
-        etapa: document.getElementById('plant-form-etapa').value,
-        notas: document.getElementById('plant-form-notas').value.trim(),
-        etapas: readEtapasRangesFromForm(),
-        notificaciones: readNotificationsFromForm(),
-      };
-      if (!payload.nombre) return;
-      const wasEditing = !!editingPlantId;
-      if (wasEditing) {
-        const ok = await askConfirm({ variant: 'success', title: 'Guardar cambios', message: '¿Confirmás guardar los cambios en esta planta?' });
-        if (!ok) return;
-      }
-      try {
-        let plantId;
-        if (wasEditing) {
-          await apiFetch('/plants/' + editingPlantId, { method: 'PUT', body: payload });
-          plantId = editingPlantId;
-          showToast('Planta actualizada');
-        } else {
-          const created = await apiFetch('/plants', { method: 'POST', body: payload });
-          plantId = created.id;
-          editingPlantId = created.id;
-          const pendingRiegos = modalRiegos.filter(r => !r.id);
-          if (pendingRiegos.length) {
-            const results = await Promise.allSettled(pendingRiegos.map(r => apiFetch('/plants/' + plantId + '/waterings', { method: 'POST', body: { fecha: r.fecha, producto: r.producto, ph: r.ph, ec: r.ec } })));
-            const failed = results.filter(r => r.status === 'rejected').length;
-            if (failed) showToast(failed + ' riego(s) no se pudieron guardar', true);
-          }
-          showToast('Planta creada');
-        }
-        if (pendingPlantFoto) {
-          const formData = new FormData();
-          formData.append('foto', pendingPlantFoto, pendingPlantFoto.name || 'ilustracion.svg');
-          try { await apiUpload('/plants/' + plantId + '/photo', formData); }
-          catch (err) { showToast('Planta guardada, pero la foto falló: ' + err.message, true); }
-        }
-        closePlantModal();
-        await loadEverything();
-        if (currentView === 'plant-detail' && currentPlantId === plantId) openPlantDetail(plantId, { noHistory: true });
-      } catch (err) { showToast(err.message, true); }
-    }, true);
 
     // Renderizar calendario
     async function renderCalendar() {
