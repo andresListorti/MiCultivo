@@ -1,9 +1,11 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { db } from '../firebaseAdmin';
 import { deleteCollection } from '../lib/deleteCollection';
 import { AuthedRequest } from '../middleware/auth';
 import wateringsRouter from './waterings';
 import photosRouter from './photos';
+import { upload, handleUploadErrors } from '../lib/upload';
+import { deleteBlobFolder, deleteBlobUrl, isAllowedImageMime, uploadImageBuffer } from '../lib/storage';
 
 const router = Router();
 
@@ -45,6 +47,8 @@ router.post('/', async (req: AuthedRequest, res) => {
     tentId: tentId || null,
     fecha: fecha || now.split('T')[0],
     etapa: etapa || 'Enraizado',
+    etapaDesde: now.split('T')[0],
+    fotoUrl: null,
     notas: notas || '',
     creadoEn: now,
     actualizadoEn: now,
@@ -103,9 +107,50 @@ router.put('/:id', async (req: AuthedRequest, res) => {
   if (genetica !== undefined) update.genetica = genetica;
   if (tentId !== undefined) update.tentId = tentId || null; // reasignación de carpa
   if (fecha !== undefined) update.fecha = fecha;
-  if (etapa !== undefined) update.etapa = etapa;
+  if (etapa !== undefined) {
+    update.etapa = etapa;
+    if (etapa !== doc.data()!.etapa) update.etapaDesde = new Date().toISOString().split('T')[0];
+  }
   if (notas !== undefined) update.notas = notas;
   await ref.update(update);
+  const updated = await ref.get();
+  res.json({ id: updated.id, ...updated.data() });
+});
+
+/** POST /api/plants/:id/photo — sube/reemplaza la foto de portada de una planta propia. */
+router.post('/:id/photo', upload.single('foto'), handleUploadErrors, async (req: AuthedRequest, res: Response) => {
+  const ref = db.collection('plants').doc(req.params.id);
+  const doc = await ref.get();
+  if (!doc.exists || doc.data()?.ownerId !== req.uid) {
+    res.status(404).json({ error: 'Planta no encontrada' });
+    return;
+  }
+  const file = (req as any).file as Express.Multer.File | undefined;
+  if (!file) {
+    res.status(400).json({ error: 'foto es requerida' });
+    return;
+  }
+  if (!isAllowedImageMime(file.mimetype)) {
+    res.status(400).json({ error: 'Formato de imagen no soportado (usá jpg, png o webp)' });
+    return;
+  }
+  const { url } = await uploadImageBuffer(`plants/${req.params.id}/cover`, file.buffer, file.mimetype);
+  await ref.update({ fotoUrl: url, actualizadoEn: new Date().toISOString() });
+  const updated = await ref.get();
+  res.json({ id: updated.id, ...updated.data() });
+});
+
+/** DELETE /api/plants/:id/photo — borra la foto de portada de una planta propia. */
+router.delete('/:id/photo', async (req: AuthedRequest, res: Response) => {
+  const ref = db.collection('plants').doc(req.params.id);
+  const doc = await ref.get();
+  if (!doc.exists || doc.data()?.ownerId !== req.uid) {
+    res.status(404).json({ error: 'Planta no encontrada' });
+    return;
+  }
+  const fotoUrl = doc.data()?.fotoUrl;
+  if (fotoUrl) await deleteBlobUrl(fotoUrl);
+  await ref.update({ fotoUrl: null, actualizadoEn: new Date().toISOString() });
   const updated = await ref.get();
   res.json({ id: updated.id, ...updated.data() });
 });
@@ -120,6 +165,7 @@ router.delete('/:id', async (req: AuthedRequest, res) => {
   }
   await deleteCollection(`plants/${req.params.id}/waterings`);
   await deleteCollection(`plants/${req.params.id}/photos`);
+  await deleteBlobFolder(`plants/${req.params.id}/`);
   await ref.delete();
   res.status(204).send();
 });

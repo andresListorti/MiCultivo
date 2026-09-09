@@ -6,6 +6,7 @@ import { requireAuth } from './middleware/auth';
 import tentsRouter from './routes/tents';
 import plantsRouter from './routes/plants';
 import harvestsRouter from './routes/harvests';
+import { FAVICON_SVG, ICON_32_PNG, ICON_192_PNG, APPLE_TOUCH_ICON_PNG } from './lib/icons';
 
 const app = express();
 
@@ -29,6 +30,26 @@ function loadIndexHtml(): string {
   return '<h1>index.html no encontrado en el bundle</h1>';
 }
 const INDEX_HTML = loadIndexHtml();
+
+// Ícono de la app (favicon + PWA): embebido en código (src/lib/icons.ts),
+// no leído de un archivo vía `includeFiles` de vercel.json — un intento
+// anterior con un patrón `{a,b}` en includeFiles no bundleó NADA (ni
+// siquiera index.html), tumbando el sitio entero.
+app.get('/favicon.svg', (_req, res) => res.type('image/svg+xml').send(FAVICON_SVG));
+app.get('/icon-32.png', (_req, res) => res.type('png').send(ICON_32_PNG));
+app.get('/icon-192.png', (_req, res) => res.type('png').send(ICON_192_PNG));
+app.get('/apple-touch-icon.png', (_req, res) => res.type('png').send(APPLE_TOUCH_ICON_PNG));
+app.get('/site.webmanifest', (_req, res) => res.type('application/manifest+json').json({
+  name: 'Mi Cultivo',
+  short_name: 'Mi Cultivo',
+  start_url: '/',
+  display: 'standalone',
+  background_color: '#052e16',
+  theme_color: '#14532d',
+  icons: [
+    { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+  ],
+}));
 
 app.get('/', (_req, res) => res.type('html').send(INDEX_HTML));
 

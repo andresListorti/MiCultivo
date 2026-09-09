@@ -62,12 +62,14 @@ scripts/seed.ts           → datos de ejemplo
 - `tents/{tentId}/environmentReadings/{id}` — historial de lecturas ambientales
 - `plants/{plantId}` — nombre, genética, `tentId` (a qué carpa pertenece), etapa, fecha, notas
 - `plants/{plantId}/waterings/{id}` — riegos con fecha, cantidad, producto, pH, EC
-- `plants/{plantId}/photos/{id}` — metadata de fotos (la subida real a Storage queda pendiente)
+- `plants/{plantId}/photos/{id}` — fotos con fecha/nota, subidas a Vercel Blob
 - `harvests/{id}` — cosechas, con `plantId` y `cepa` para las analíticas
 
 ## Pendiente para una próxima vuelta
 
-- Subida real de fotos a Firebase Storage (hoy el endpoint acepta una URL ya
-  subida, pero no hay UI de upload en el frontend).
 - "Próximos riegos sugeridos" del dashboard es un cálculo simple, no un
   algoritmo real basado en el historial.
+
+Ver CLAUDE.md para el detalle de fotos (Vercel Blob), recomendaciones por
+cepa/etapa, horario de luz por carpa, y navegación con historial del
+navegador — todo agregado después de este README inicial.

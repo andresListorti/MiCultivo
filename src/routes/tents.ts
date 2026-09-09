@@ -5,6 +5,33 @@ import { AuthedRequest } from '../middleware/auth';
 
 const router = Router();
 
+const LUZ_PRESETS: Record<string, number> = { '18/6': 18, '12/12': 12, '20/4': 20, '24/0': 24 };
+
+/** Valida el body crudo de luzSchedule. Devuelve un mensaje de error, o null si está OK. */
+function validateLuzSchedule(luzSchedule: any): string | null {
+  if (luzSchedule === null || luzSchedule === undefined) return null;
+  if (typeof luzSchedule !== 'object') return 'luzSchedule inválido';
+  const { preset, horasEncendido } = luzSchedule;
+  if (!preset || (!LUZ_PRESETS[preset] && preset !== 'personalizado')) {
+    return `preset de luz inválido, debe ser una de: ${Object.keys(LUZ_PRESETS).join(', ')}, personalizado`;
+  }
+  const horas = preset === 'personalizado' ? horasEncendido : LUZ_PRESETS[preset];
+  if (typeof horas !== 'number' || horas < 1 || horas > 24) {
+    return 'horasEncendido debe ser un número entre 1 y 24';
+  }
+  if (horas < 24 && !/^([01]\d|2[0-3]):([0-5]\d)$/.test(luzSchedule.horaInicio || '')) {
+    return 'horaInicio debe tener formato HH:MM (24hs)';
+  }
+  return null;
+}
+
+/** Normaliza luzSchedule para guardar: calcula horasEncendido a partir del preset salvo 'personalizado'. */
+function normalizeLuzSchedule(luzSchedule: any): { preset: string; horasEncendido: number; horaInicio: string | null } | null {
+  if (!luzSchedule) return null;
+  const horas = luzSchedule.preset === 'personalizado' ? luzSchedule.horasEncendido : LUZ_PRESETS[luzSchedule.preset];
+  return { preset: luzSchedule.preset, horasEncendido: horas, horaInicio: horas < 24 ? luzSchedule.horaInicio : null };
+}
+
 /**
  * GET /api/tents
  * Lista las carpas DEL USUARIO AUTENTICADO (ownerId === req.uid), con sus
@@ -37,9 +64,14 @@ router.get('/', async (req: AuthedRequest, res) => {
 
 /** POST /api/tents — crea una carpa nueva, propiedad del usuario autenticado. */
 router.post('/', async (req: AuthedRequest, res) => {
-  const { nombre, notas, dimensiones, tipoLuz, extraccion } = req.body || {};
+  const { nombre, notas, dimensiones, tipoLuz, extraccion, luzSchedule } = req.body || {};
   if (!nombre || typeof nombre !== 'string') {
     res.status(400).json({ error: 'nombre es requerido' });
+    return;
+  }
+  const luzError = validateLuzSchedule(luzSchedule);
+  if (luzError) {
+    res.status(400).json({ error: luzError });
     return;
   }
   const now = new Date().toISOString();
@@ -50,6 +82,7 @@ router.post('/', async (req: AuthedRequest, res) => {
     dimensiones: dimensiones || '',
     tipoLuz: tipoLuz || '',
     extraccion: extraccion || '',
+    luzSchedule: normalizeLuzSchedule(luzSchedule),
     ambiente: null as null | Record<string, unknown>,
     creadoEn: now,
     actualizadoEn: now,
@@ -91,13 +124,19 @@ router.put('/:id', async (req: AuthedRequest, res) => {
     res.status(404).json({ error: 'Carpa no encontrada' });
     return;
   }
-  const { nombre, notas, dimensiones, tipoLuz, extraccion } = req.body || {};
+  const { nombre, notas, dimensiones, tipoLuz, extraccion, luzSchedule } = req.body || {};
+  const luzError = luzSchedule !== undefined ? validateLuzSchedule(luzSchedule) : null;
+  if (luzError) {
+    res.status(400).json({ error: luzError });
+    return;
+  }
   const update: Record<string, unknown> = { actualizadoEn: new Date().toISOString() };
   if (nombre !== undefined) update.nombre = nombre;
   if (notas !== undefined) update.notas = notas;
   if (dimensiones !== undefined) update.dimensiones = dimensiones;
   if (tipoLuz !== undefined) update.tipoLuz = tipoLuz;
   if (extraccion !== undefined) update.extraccion = extraccion;
+  if (luzSchedule !== undefined) update.luzSchedule = normalizeLuzSchedule(luzSchedule);
   await ref.update(update);
   const updated = await ref.get();
   res.json({ id: updated.id, ...updated.data() });

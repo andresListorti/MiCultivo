@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mi Cultivo</title>
 <meta name="theme-color" content="#14532d">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
 
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -160,14 +164,28 @@
             <i class="fa-solid fa-camera text-sky-600 dark:text-sky-400"></i><span class="text-[11px] font-semibold text-slate-600 dark:text-slate-300">Fotos</span>
           </button>
         </div>
+        <div id="plant-detail-recommendation" class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-4"></div>
         <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-4">
           <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">Notas</h3>
           <p id="plant-detail-notes" class="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap"></p>
+        </div>
+        <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-4">
+          <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">Agregar foto a la bitácora (con fecha)</h3>
+          <p class="text-[10px] text-slate-400 dark:text-slate-500 -mt-1 mb-1">Para cambiar la foto de portada, tocá la imagen de arriba.</p>
+          <form id="plant-detail-photo-form" class="flex flex-col gap-2">
+            <input type="file" id="plant-detail-photo-file" accept="image/jpeg,image/png,image/webp" required class="text-xs text-slate-500 dark:text-slate-400">
+            <div class="grid grid-cols-2 gap-2">
+              <input type="date" id="plant-detail-photo-fecha" class="text-[11px] font-mono px-2 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+              <input type="text" id="plant-detail-photo-nota" placeholder="Nota (opcional)" class="text-[11px] px-2 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+            </div>
+            <button type="submit" class="bg-cultivo-600 hover:bg-cultivo-700 text-white text-xs font-semibold py-2 rounded-lg">Subir foto</button>
+          </form>
         </div>
       </section>
 
       <!-- RIEGO Y NUTRIENTES -->
       <section id="view-watering" class="view flex flex-col gap-4" hidden>
+        <div id="watering-tent-chips" class="flex gap-1.5 overflow-x-auto custom-scrollbar pb-1"></div>
         <div id="watering-filter-chips" class="flex gap-1.5 overflow-x-auto custom-scrollbar pb-1"></div>
         <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
           <div class="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800">
@@ -258,6 +276,28 @@
             <input id="tent-form-extraccion" type="text" placeholder="Extractor 4&quot;" class="w-full mt-1 text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 bg-white dark:bg-slate-800">
           </div>
           <div>
+            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Horario de luz</label>
+            <select id="tent-form-luz-preset" class="w-full mt-1 text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 bg-white dark:bg-slate-800">
+              <option value="">Sin configurar</option>
+              <option value="18/6">18/6 (vegetativo)</option>
+              <option value="12/12">12/12 (floración)</option>
+              <option value="20/4">20/4</option>
+              <option value="24/0">24/0 (siempre encendida)</option>
+              <option value="personalizado">Personalizado</option>
+            </select>
+            <div class="grid grid-cols-2 gap-2 mt-2">
+              <div id="tent-form-luz-horas-wrap" hidden>
+                <label class="text-[10px] text-slate-400 dark:text-slate-500">Horas encendida</label>
+                <input type="number" id="tent-form-luz-horas" min="1" max="24" class="w-full text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 bg-white dark:bg-slate-800">
+              </div>
+              <div id="tent-form-luz-inicio-wrap" hidden>
+                <label class="text-[10px] text-slate-400 dark:text-slate-500">Hora de encendido</label>
+                <input type="time" id="tent-form-luz-horainicio" class="w-full text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 bg-white dark:bg-slate-800 font-mono">
+              </div>
+            </div>
+            <p id="tent-form-luz-preview" class="text-[11px] font-semibold mt-1.5" hidden></p>
+          </div>
+          <div>
             <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Notas</label>
             <textarea id="tent-form-notas" rows="2" class="w-full mt-1 text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 bg-white dark:bg-slate-800 resize-none"></textarea>
           </div>
@@ -311,7 +351,26 @@
           </div>
           <div>
             <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Cepa / genética</label>
-            <input id="plant-form-genetica" type="text" placeholder="Ej: Northern Lights (Índica)" class="w-full mt-1 text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 bg-white dark:bg-slate-800">
+            <input id="plant-form-genetica" type="text" list="cepa-suggestions" placeholder="Ej: Northern Lights, o escribí la tuya" class="w-full mt-1 text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 bg-white dark:bg-slate-800">
+            <datalist id="cepa-suggestions"></datalist>
+            <p id="plant-form-genetica-info" class="text-[10px] text-slate-500 dark:text-slate-400 mt-1" hidden></p>
+          </div>
+          <div>
+            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Foto de portada</label>
+            <div class="mt-1 flex items-center gap-2.5">
+              <div class="relative shrink-0">
+                <img id="plant-form-foto-preview" hidden class="w-16 h-16 rounded-lg object-contain bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <button type="button" id="plant-form-foto-delete" hidden title="Borrar foto" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center"><i class="fa-solid fa-xmark text-[9px]"></i></button>
+              </div>
+              <input type="file" id="plant-form-foto" accept="image/jpeg,image/png,image/webp" class="text-xs flex-1 text-slate-500 dark:text-slate-400">
+            </div>
+            <div id="plant-form-strain-preset" hidden class="mt-2 flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg p-2">
+              <img id="plant-form-strain-preset-img" class="w-10 h-10 rounded-lg object-contain bg-white dark:bg-slate-900 shrink-0">
+              <div class="flex-1 min-w-0">
+                <p class="text-[10px] text-slate-500 dark:text-slate-400">¿Usar esta ilustración como portada?</p>
+                <button type="button" id="plant-form-strain-preset-use" class="text-[11px] font-semibold text-cultivo-700 dark:text-cultivo-400">Usar esta imagen</button>
+              </div>
+            </div>
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
@@ -340,7 +399,7 @@
               <button type="button" id="btn-add-modal-riego" class="text-[11px] font-semibold text-cultivo-700 dark:text-cultivo-400 flex items-center gap-1"><i class="fa-solid fa-plus"></i> Agregar riego</button>
             </div>
             <div id="plant-modal-riegos" class="flex flex-col gap-2"></div>
-            <p id="plant-modal-riegos-hint" class="text-[10px] text-slate-400 dark:text-slate-500 mt-1" hidden>Guardá la planta primero para poder cargar riegos.</p>
+            <p id="plant-modal-riegos-hint" class="text-[10px] text-slate-400 dark:text-slate-500 mt-1" hidden>Estos riegos se guardarán junto con la planta al crearla.</p>
           </div>
         </div>
         <div class="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2 sticky bottom-0 bg-white dark:bg-slate-900">
@@ -349,6 +408,23 @@
           <button type="submit" class="bg-cultivo-600 hover:bg-cultivo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow">Guardar</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL DE CONFIRMACIÓN GENÉRICO: rojo para borrar, verde para guardar ediciones -->
+  <div id="modal-backdrop-confirm" hidden class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl max-w-sm w-full p-5 flex flex-col gap-3">
+      <div class="flex items-center gap-2.5">
+        <div id="confirm-modal-icon-wrap" class="w-9 h-9 rounded-full flex items-center justify-center shrink-0">
+          <i id="confirm-modal-icon" class="fa-solid text-base"></i>
+        </div>
+        <h3 id="confirm-modal-title" class="text-sm font-bold text-slate-800 dark:text-slate-100"></h3>
+      </div>
+      <p id="confirm-modal-message" class="text-xs text-slate-500 dark:text-slate-400"></p>
+      <div class="flex gap-2 justify-end mt-1">
+        <button type="button" id="confirm-modal-cancel" class="text-xs font-semibold px-3.5 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">Cancelar</button>
+        <button type="button" id="confirm-modal-accept" class="text-xs font-semibold px-3.5 py-2 rounded-lg text-white"></button>
+      </div>
     </div>
   </div>
 
@@ -386,6 +462,23 @@
       return data;
     }
 
+    // Igual que apiFetch, pero para subir archivos (FormData) — sin Content-Type
+    // manual: el browser arma el boundary del multipart solo.
+    async function apiUpload(path, formData) {
+      const user = auth.currentUser;
+      if (!user) throw new Error('No hay sesión activa');
+      const token = await user.getIdToken();
+      const res = await fetch('/api' + path, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token },
+        body: formData,
+      });
+      if (res.status === 204) return null;
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || ('Error ' + res.status));
+      return data;
+    }
+
     /* ============================== ESTADO ============================== */
     let tentsData = [];
     let plantsData = [];
@@ -395,6 +488,7 @@
     let currentView = 'dashboard';
     let homeGroupMode = 'carpa';
     let wateringFilter = 'all';
+    let wateringTentFilter = 'all';
     let photosFilter = 'all';
 
     const etapaStyle = {
@@ -411,6 +505,129 @@
       document.getElementById('toast-icon').className = isError ? 'fa-solid fa-triangle-exclamation text-red-400' : 'fa-solid fa-circle-check text-cultivo-400';
       toast.classList.remove('opacity-0', 'translate-y-3');
       setTimeout(() => toast.classList.add('opacity-0', 'translate-y-3'), 2600);
+    }
+
+    /* ============================== MODAL DE CONFIRMACIÓN (rojo borrar / verde guardar) ============================== */
+    function askConfirm({ title, message, variant, acceptLabel }) {
+      return new Promise((resolve) => {
+        const backdrop = document.getElementById('modal-backdrop-confirm');
+        const iconWrap = document.getElementById('confirm-modal-icon-wrap');
+        const icon = document.getElementById('confirm-modal-icon');
+        const acceptBtn = document.getElementById('confirm-modal-accept');
+        const cancelBtn = document.getElementById('confirm-modal-cancel');
+        const danger = variant === 'danger';
+        document.getElementById('confirm-modal-title').textContent = title || (danger ? '¿Borrar?' : '¿Guardar?');
+        document.getElementById('confirm-modal-message').textContent = message || '';
+        iconWrap.className = 'w-9 h-9 rounded-full flex items-center justify-center shrink-0 ' + (danger ? 'bg-red-100 dark:bg-red-950/50' : 'bg-emerald-100 dark:bg-emerald-950/50');
+        icon.className = 'fa-solid text-base ' + (danger ? 'fa-triangle-exclamation text-red-600 dark:text-red-400' : 'fa-circle-check text-emerald-600 dark:text-emerald-400');
+        acceptBtn.textContent = acceptLabel || (danger ? 'Sí, borrar' : 'Sí, guardar');
+        acceptBtn.className = 'text-xs font-semibold px-3.5 py-2 rounded-lg text-white ' + (danger ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700');
+        backdrop.hidden = false;
+        function cleanup(result) {
+          backdrop.hidden = true;
+          acceptBtn.removeEventListener('click', onAccept);
+          cancelBtn.removeEventListener('click', onCancel);
+          backdrop.removeEventListener('click', onBackdrop);
+          resolve(result);
+        }
+        function onAccept() { cleanup(true); }
+        function onCancel() { cleanup(false); }
+        function onBackdrop(e) { if (e.target === backdrop) cleanup(false); }
+        acceptBtn.addEventListener('click', onAccept);
+        cancelBtn.addEventListener('click', onCancel);
+        backdrop.addEventListener('click', onBackdrop);
+      });
+    }
+
+    /* ============================== RECOMENDACIONES (base estática, sin IA) ============================== */
+    const ETAPA_GUIDE = {
+      Enraizado: { tips: 'Mantené la humedad alta (70-80%) y la temperatura estable (22-25°C). Sin fertilizante todavía — el sustrato inicial suele alcanzar, o como mucho un estimulador de raíces bien diluido.' },
+      Vegetativo: { tips: 'Fotoperíodo largo (18/6). Fertilizante rico en nitrógeno (N) para crecimiento foliar, EC moderada (~1.2-1.6). Buen momento para podas de formación (LST/topping).' },
+      Floración: { tips: 'Fotoperíodo 12/12. Bajá el nitrógeno y subí fósforo y potasio (P-K) para engorde de flores, EC un poco más alta (~1.6-2.0). Vigilá humedad relativa (bajarla progresivamente para evitar moho en cogollos).' },
+      Secado: { tips: 'Secado lento y a oscuras: 18-20°C, 50-60% humedad, sin luz directa, con algo de circulación de aire suave. Entre 7 y 12 días hasta que el tallo "cruja" al doblarse.' },
+      Curado: { tips: 'En frascos de vidrio, "burpeando" (abriendo unos minutos por día) las primeras 1-2 semanas. Mínimo 2-4 semanas de curado; 2-3 meses mejora notablemente aroma y suavidad.' },
+    };
+
+    const STRAIN_GUIDE = [
+      { keys: ['gorilla glue', 'gg4', 'gg#4'], nombre: 'Gorilla Glue', semanasMin: 8, semanasMax: 9, notas: 'Muy resinosa, agradece buen soporte de ramas en floración por el peso de los cogollos.' },
+      { keys: ['white widow'], nombre: 'White Widow', semanasMin: 8, semanasMax: 9, notas: 'Vigorosa y resistente, tolera bien errores de principiante.' },
+      { keys: ['og kush'], nombre: 'OG Kush', semanasMin: 8, semanasMax: 9, notas: 'Estructura abierta, se beneficia de defoliación moderada para mejorar circulación de aire.' },
+      { keys: ['northern lights', ' nl', 'nl#5'], nombre: 'Northern Lights', semanasMin: 7, semanasMax: 9, notas: 'Índica clásica, rápida y compacta, ideal para espacios chicos.' },
+      { keys: ['blue dream'], nombre: 'Blue Dream', semanasMin: 9, semanasMax: 10, notas: 'Crece bastante en floración (estirón) — dejale espacio vertical.' },
+      { keys: ['amnesia'], nombre: 'Amnesia Haze', semanasMin: 10, semanasMax: 12, notas: 'Floración larga tipo sativa — paciencia, arranca lenta y termina fuerte.' },
+      { keys: ['critical'], nombre: 'Critical', semanasMin: 7, semanasMax: 8, notas: 'Floración corta y buena producción, muy usada por principiantes.' },
+      { keys: ['jack herer'], nombre: 'Jack Herer', semanasMin: 8, semanasMax: 9, notas: 'Efecto sativa marcado, agradece buena iluminación en floración.' },
+      { keys: ['gelato'], nombre: 'Gelato', semanasMin: 8, semanasMax: 9, notas: 'Muy sensible al estrés térmico — cuidar la temperatura en floración.' },
+      { keys: ['wedding cake'], nombre: 'Wedding Cake', semanasMin: 8, semanasMax: 9, notas: 'Cogollos densos, vigilar humedad para evitar moho.' },
+      { keys: ['skunk'], nombre: 'Skunk #1', semanasMin: 7, semanasMax: 8, notas: 'Genética muy estable y predecible, buena para calibrar tiempos.' },
+      { keys: ['blueberry'], nombre: 'Blueberry', semanasMin: 8, semanasMax: 9, notas: 'Índica dominante, coloraciones azuladas más marcadas con frío nocturno.' },
+      { keys: ['girl scout cookies', 'gsc'], nombre: 'Girl Scout Cookies', semanasMin: 9, semanasMax: 10, notas: 'Ramas finas que se quiebran con cogollos pesados — atalas con tutores.' },
+      { keys: ['purple haze'], nombre: 'Purple Haze', semanasMin: 8, semanasMax: 9, notas: 'Coloraciones violáceas más marcadas con temperaturas nocturnas bajas en floración.' },
+      { keys: ['sour diesel'], nombre: 'Sour Diesel', semanasMin: 10, semanasMax: 11, notas: 'Floración larga tipo sativa, planta alta — buena extracción de olor recomendada.' },
+      { keys: ['zkittlez'], nombre: 'Zkittlez', semanasMin: 7, semanasMax: 8, notas: 'Compacta y de floración corta, buena producción de resina.' },
+      { keys: ['bubba kush'], nombre: 'Bubba Kush', semanasMin: 8, semanasMax: 9, notas: 'Índica robusta y de bajo mantenimiento, ideal para principiantes.' },
+    ];
+
+    document.getElementById('cepa-suggestions').innerHTML = STRAIN_GUIDE.map(s => `<option value="${s.nombre}">`).join('');
+
+    // Ilustración simple y propia (no una foto real) para cada cepa: un
+    // cuadrado de color distinto con una silueta de hoja de 2 folíolos y el
+    // nombre — sirve como portada preseleccionable al crear una planta.
+    const STRAIN_COLORS = ['#16a34a','#0d9488','#7c3aed','#ea580c','#0891b2','#65a30d','#c026d3','#d97706','#059669','#4f46e5','#dc2626','#0ea5e9','#a16207','#be185d','#15803d','#7c2d12','#1d4ed8'];
+    function strainIllustrationDataUri(strain) {
+      const idx = STRAIN_GUIDE.indexOf(strain);
+      const bg = STRAIN_COLORS[(idx >= 0 ? idx : 0) % STRAIN_COLORS.length];
+      const label = String(strain.nombre).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300">
+        <rect width="300" height="300" rx="28" fill="${bg}"/>
+        <g transform="translate(150,118)" fill="#ffffff" fill-opacity="0.95">
+          <ellipse cx="0" cy="-50" rx="15" ry="50"/>
+          <ellipse cx="0" cy="-45" rx="13" ry="45" transform="rotate(38)"/>
+          <ellipse cx="0" cy="-45" rx="13" ry="45" transform="rotate(-38)"/>
+          <ellipse cx="0" cy="-32" rx="11" ry="34" transform="rotate(74)"/>
+          <ellipse cx="0" cy="-32" rx="11" ry="34" transform="rotate(-74)"/>
+        </g>
+        <text x="150" y="252" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#ffffff" text-anchor="middle">${label}</text>
+      </svg>`;
+      return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+    }
+
+    function findStrainGuide(genetica) {
+      if (!genetica) return null;
+      const norm = genetica.toLowerCase();
+      let best = null;
+      STRAIN_GUIDE.forEach((s) => {
+        s.keys.forEach((k) => {
+          if (norm.includes(k.trim()) && (!best || k.trim().length > best._matchLen)) {
+            best = Object.assign({ _matchLen: k.trim().length }, s);
+          }
+        });
+      });
+      return best;
+    }
+
+    function getPlantRecommendation(plant) {
+      const etapaInfo = ETAPA_GUIDE[plant.etapa] || null;
+      const strain = findStrainGuide(plant.genetica);
+      let floracion = null;
+      if (plant.etapa === 'Floración' && plant.etapaDesde && strain) {
+        const dias = Math.max(0, Math.round((Date.now() - new Date(plant.etapaDesde).getTime()) / 86400000));
+        const minDias = strain.semanasMin * 7;
+        const maxDias = strain.semanasMax * 7;
+        let estado;
+        if (dias < minDias) estado = 'temprano todavía (' + dias + ' de ' + minDias + '-' + maxDias + ' días estimados)';
+        else if (dias <= maxDias) estado = 'en ventana de cosecha (' + dias + ' días, estimado ' + minDias + '-' + maxDias + ')';
+        else estado = 'pasado el estimado (' + dias + ' días, esperado ' + minDias + '-' + maxDias + ') — revisá tricomas';
+        floracion = { dias, minDias, maxDias, estado };
+      }
+      return { etapaInfo, strain, floracion };
+    }
+
+    function recommendationLineHtml(plant) {
+      const rec = getPlantRecommendation(plant);
+      if (rec.floracion) return '<i class="fa-solid fa-scissors text-[9px]"></i> ' + rec.floracion.estado;
+      if (rec.etapaInfo) return '<i class="fa-solid fa-lightbulb text-[9px]"></i> ' + rec.etapaInfo.tips;
+      return '';
     }
 
     /* ============================== LOGIN / SESIÓN ============================== */
@@ -452,7 +669,13 @@
       dashboard: 'Mi Cultivo', watering: 'Riego y nutrientes', harvest: 'Cosecha',
       photos: 'Bitácora fotográfica', 'plant-detail': 'Detalle de planta',
     };
-    function showView(id) {
+    // Integra la navegación interna con el historial del navegador: cada
+    // cambio de vista agrega una entrada, así "atrás" (en el navegador o en
+    // el botón de la app) vuelve a la pantalla anterior DENTRO de la app en
+    // vez de sacar al usuario a lo que tenía abierto antes de entrar acá.
+    let historyReady = false;
+    function showView(id, opts) {
+      opts = opts || {};
       document.querySelectorAll('.view').forEach(v => v.hidden = (v.id !== 'view-' + id));
       document.getElementById('header-title').textContent = headerTitles[id] || 'Mi Cultivo';
       document.getElementById('btn-back').hidden = (id !== 'plant-detail');
@@ -465,9 +688,23 @@
       });
       currentView = id;
       window.scrollTo({ top: 0 });
+      if (!opts.noHistory) {
+        const state = { view: id, plantId: id === 'plant-detail' ? currentPlantId : null };
+        if (!historyReady) { history.replaceState(state, '', '#' + id); historyReady = true; }
+        else { history.pushState(state, '', '#' + id); }
+      }
     }
+    window.addEventListener('popstate', (e) => {
+      const state = e.state;
+      if (!state) { showView('dashboard', { noHistory: true }); return; }
+      if (state.view === 'plant-detail' && state.plantId) {
+        openPlantDetail(state.plantId, { noHistory: true });
+      } else {
+        showView(state.view, { noHistory: true });
+      }
+    });
     document.querySelectorAll('.nav-btn').forEach(btn => btn.addEventListener('click', () => showView(btn.dataset.nav)));
-    document.getElementById('btn-back').addEventListener('click', () => showView('dashboard'));
+    document.getElementById('btn-back').addEventListener('click', () => history.back());
     document.getElementById('btn-logo-home').addEventListener('click', () => showView('dashboard'));
 
     /* ============================== MODO OSCURO ============================== */
@@ -510,17 +747,49 @@
       return parts.length ? parts.join(' · ') : 'Sin lecturas ambientales todavía';
     }
 
+    // Calcula, a partir del horario configurado, la hora de apagado y si la
+    // luz está encendida en este momento (maneja el caso de que cruce medianoche).
+    function computeLuzEstado(schedule) {
+      if (!schedule || !schedule.preset) return null;
+      const horas = schedule.horasEncendido;
+      const fmt = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+      if (horas >= 24) {
+        return { horaFin: null, encendidaAhora: true, texto: 'Siempre encendida (24/0)' };
+      }
+      if (!schedule.horaInicio) return null;
+      const [hIni, mIni] = schedule.horaInicio.split(':').map(Number);
+      const inicioMin = hIni * 60 + mIni;
+      const finMin = (inicioMin + horas * 60) % 1440;
+      const now = new Date();
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+      const encendidaAhora = inicioMin < finMin ? (nowMin >= inicioMin && nowMin < finMin) : (nowMin >= inicioMin || nowMin < finMin);
+      const texto = schedule.preset + ' · enciende ' + schedule.horaInicio + ', apaga ' + fmt(finMin) + ' — ' + (encendidaAhora ? 'encendida ahora' : 'apagada ahora');
+      return { horaFin: fmt(finMin), encendidaAhora, texto };
+    }
+
     /* ============================== HOME (por carpa / por cepa) ============================== */
     function daysSince(dateStr) {
       if (!dateStr) return '—';
       return Math.max(0, Math.round((Date.now() - new Date(dateStr).getTime()) / 86400000));
     }
 
+    // La foto de portada siempre se sube a la misma URL (se sobreescribe), así
+    // que sin esto el navegador la cachea y sigue mostrando la versión vieja
+    // después de reemplazarla. Se le agrega la fecha de última modificación
+    // como query param para que el navegador la trate como un recurso nuevo.
+    function versionedFotoUrl(p) {
+      if (!p || !p.fotoUrl) return '';
+      return p.fotoUrl + '?v=' + encodeURIComponent(p.actualizadoEn || Date.now());
+    }
+
     function plantCardHtml(p) {
+      const cover = p.fotoUrl
+        ? `<img src="${versionedFotoUrl(p)}" class="max-w-full max-h-full object-contain" loading="lazy">`
+        : `<i class="fa-solid fa-cannabis text-xl text-cultivo-400 dark:text-cultivo-600"></i>`;
       return `
         <button type="button" data-open-plant="${p.id}" class="text-left bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden active:scale-[0.98] transition">
-          <div class="h-16 bg-gradient-to-br from-cultivo-100 to-cultivo-50 dark:from-slate-800 dark:to-slate-800/50 flex items-center justify-center">
-            <i class="fa-solid fa-cannabis text-xl text-cultivo-400 dark:text-cultivo-600"></i>
+          <div class="h-28 bg-gradient-to-br from-cultivo-100 to-cultivo-50 dark:from-slate-800 dark:to-slate-800/50 flex items-center justify-center p-1.5">
+            ${cover}
           </div>
           <div class="p-2">
             <p class="text-[11px] font-bold text-slate-800 dark:text-slate-100 truncate">${p.nombre}</p>
@@ -535,6 +804,8 @@
       const editBtn = tent ? `<button type="button" data-edit-tent="${tent.id}" title="Editar carpa" class="w-7 h-7 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500"><i class="fa-solid fa-pen text-xs"></i></button>` : '';
       const addBtn = tent ? `<button type="button" data-add-plant-tent="${tent.id}" class="text-cultivo-700 dark:text-cultivo-400 text-[11px] font-semibold flex items-center gap-1"><i class="fa-solid fa-plus"></i> Planta en esta carpa</button>` : '';
       const ambiente = tent ? `<p class="text-[10px] text-slate-400 dark:text-slate-500 truncate flex items-center gap-1"><i class="fa-solid fa-temperature-half text-[9px]"></i> ${ambienteLine(tent.ambiente)}</p>` : `<p class="text-[10px] text-slate-400 dark:text-slate-500">Plantas sin carpa asignada todavía.</p>`;
+      const luzEstado = tent ? computeLuzEstado(tent.luzSchedule) : null;
+      const luzLine = luzEstado ? `<p class="text-[10px] ${luzEstado.encendidaAhora ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500'} truncate flex items-center gap-1"><i class="fa-solid fa-lightbulb text-[9px]"></i> ${luzEstado.texto}</p>` : '';
       const plantsHtml = plants.length ? `<div class="grid grid-cols-2 gap-3 mt-3">${plants.map(plantCardHtml).join('')}</div>` : `<p class="text-[11px] text-slate-400 dark:text-slate-500 mt-3">Sin plantas todavía.</p>`;
       return `
         <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-3.5">
@@ -544,6 +815,7 @@
               <div class="min-w-0">
                 <p class="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">${title}</p>
                 ${ambiente}
+                ${luzLine}
               </div>
             </div>
             <div class="flex items-center gap-1 shrink-0"><span class="text-[10px] font-bold text-slate-400 dark:text-slate-500">${plants.length}</span>${editBtn}</div>
@@ -606,12 +878,23 @@
     document.getElementById('btn-add-tent').addEventListener('click', () => openTentModal());
 
     /* ============================== DETALLE DE PLANTA ============================== */
-    async function openPlantDetail(plantId) {
+    async function openPlantDetail(plantId, opts) {
+      opts = opts || {};
       currentPlantId = plantId;
       let p;
       try { p = await apiFetch('/plants/' + plantId); } catch (err) { showToast(err.message, true); return; }
       const tentName = (tentsData.find(t => t.id === p.tentId) || {}).nombre || 'Sin carpa asignada';
+      const coverHtml = p.fotoUrl
+        ? `<div class="relative mb-3">
+             <img id="plant-detail-cover-img" src="${versionedFotoUrl(p)}" class="w-full h-60 object-contain bg-slate-100 dark:bg-slate-800 rounded-xl cursor-pointer">
+             <button type="button" id="plant-detail-cover-delete" title="Borrar foto de portada" class="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center"><i class="fa-solid fa-xmark text-xs"></i></button>
+           </div>`
+        : `<button type="button" id="plant-detail-cover-img" class="w-full h-60 rounded-xl mb-3 bg-slate-100 dark:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-700 flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500">
+             <i class="fa-solid fa-camera text-lg"></i><span class="text-[11px] font-semibold">Tocá para agregar foto</span>
+           </button>`;
       document.getElementById('plant-detail-card').innerHTML = `
+        ${coverHtml}
+        <input type="file" id="plant-detail-cover-input" accept="image/jpeg,image/png,image/webp" hidden>
         <div class="flex items-start justify-between gap-2">
           <div class="min-w-0">
             <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 truncate">${p.nombre}</h2>
@@ -629,17 +912,81 @@
         </div>`;
       document.getElementById('plant-detail-notes').textContent = p.notas || 'Sin notas.';
       document.getElementById('btn-edit-plant-detail').addEventListener('click', () => openPlantModal(p.id));
-      showView('plant-detail');
+
+      const coverInput = document.getElementById('plant-detail-cover-input');
+      document.getElementById('plant-detail-cover-img').addEventListener('click', () => coverInput.click());
+      coverInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (file.size > 4 * 1024 * 1024) { showToast('La imagen no puede superar 4MB', true); e.target.value = ''; return; }
+        const ok = await askConfirm({ variant: 'success', title: 'Guardar foto', message: '¿Confirmás guardar esta foto como portada de la planta?' });
+        if (!ok) { e.target.value = ''; return; }
+        const formData = new FormData();
+        formData.append('foto', file);
+        try {
+          await apiUpload('/plants/' + p.id + '/photo', formData);
+          showToast('Foto de portada actualizada');
+          openPlantDetail(p.id, { noHistory: true });
+        } catch (err) { showToast(err.message, true); }
+      });
+      const coverDeleteBtn = document.getElementById('plant-detail-cover-delete');
+      if (coverDeleteBtn) coverDeleteBtn.addEventListener('click', async () => {
+        const ok = await askConfirm({ variant: 'danger', title: 'Eliminar foto', message: '¿Estás seguro de que querés borrar la foto de portada de esta planta? Esta acción no se puede deshacer.' });
+        if (!ok) return;
+        try {
+          await apiFetch('/plants/' + p.id + '/photo', { method: 'DELETE' });
+          showToast('Foto eliminada');
+          openPlantDetail(p.id, { noHistory: true });
+        } catch (err) { showToast(err.message, true); }
+      });
+
+      const rec = getPlantRecommendation(p);
+      const strainNota = rec.strain ? `<p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5">${rec.strain.nombre}: ${rec.strain.notas}</p>` : '';
+      const floracionLine = rec.floracion ? `<p class="text-xs font-semibold text-amber-700 dark:text-amber-400 mt-1.5 flex items-center gap-1"><i class="fa-solid fa-scissors text-[10px]"></i> ${rec.floracion.estado}</p>` : '';
+      document.getElementById('plant-detail-recommendation').innerHTML = `
+        <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2 flex items-center gap-1.5"><i class="fa-solid fa-lightbulb text-cultivo-500"></i> Recomendaciones</h3>
+        <p class="text-xs text-slate-600 dark:text-slate-300">${(rec.etapaInfo && rec.etapaInfo.tips) || 'Sin recomendaciones para esta etapa.'}</p>
+        ${strainNota}
+        ${floracionLine}`;
+
+      document.getElementById('plant-detail-photo-form').reset();
+      showView('plant-detail', opts);
     }
+
+    document.querySelectorAll('[data-jump-watering]').forEach(btn => btn.addEventListener('click', () => {
+      const plant = plantsData.find(p => p.id === currentPlantId);
+      wateringTentFilter = plant ? (plant.tentId || 'all') : 'all';
+      wateringFilter = currentPlantId;
+      showView('watering');
+    }));
+    document.querySelectorAll('[data-jump-photos]').forEach(btn => btn.addEventListener('click', () => {
+      photosFilter = currentPlantId;
+      showView('photos');
+    }));
+
+    document.getElementById('plant-detail-photo-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fileInput = document.getElementById('plant-detail-photo-file');
+      const file = fileInput.files[0];
+      if (!file) return;
+      if (file.size > 4 * 1024 * 1024) { showToast('La imagen no puede superar 4MB', true); return; }
+      const formData = new FormData();
+      formData.append('foto', file);
+      const fecha = document.getElementById('plant-detail-photo-fecha').value;
+      if (fecha) formData.append('fecha', fecha);
+      const nota = document.getElementById('plant-detail-photo-nota').value.trim();
+      if (nota) formData.append('nota', nota);
+      const ok = await askConfirm({ variant: 'success', title: 'Guardar foto', message: '¿Confirmás agregar esta foto a la bitácora de la planta?' });
+      if (!ok) return;
+      try {
+        await apiUpload('/plants/' + currentPlantId + '/photos/upload', formData);
+        document.getElementById('plant-detail-photo-form').reset();
+        showToast('Foto agregada — mirala en la solapa Fotos');
+      } catch (err) { showToast(err.message, true); }
+    });
 
     /* ============================== MODAL CARPA ============================== */
     let editingTentId = null;
-    let deleteTentArmed = false;
-
-    function resetDeleteTentButton() {
-      const btn = document.getElementById('btn-delete-tent');
-      btn.textContent = 'Eliminar carpa'; btn.classList.remove('bg-red-600', 'text-white'); deleteTentArmed = false;
-    }
 
     function renderTentEnvironmentCurrent(tent) {
       const amb = tent.ambiente || {};
@@ -659,9 +1006,12 @@
     async function renderTentPlantsList(tentId) {
       const plants = plantsData.filter(p => p.tentId === tentId);
       document.getElementById('tent-plants-list').innerHTML = plants.length ? plants.map(p => `
-        <button type="button" data-modal-open-plant="${p.id}" class="flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-left">
-          <span class="text-[11px] font-semibold text-slate-700 dark:text-slate-200 truncate">${p.nombre}</span>
-          <span class="text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${etapaStyle[p.etapa] || ''}">${p.etapa}</span>
+        <button type="button" data-modal-open-plant="${p.id}" class="flex flex-col gap-1 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-left">
+          <span class="flex items-center justify-between gap-2">
+            <span class="text-[11px] font-semibold text-slate-700 dark:text-slate-200 truncate">${p.nombre}</span>
+            <span class="text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${etapaStyle[p.etapa] || ''}">${p.etapa}</span>
+          </span>
+          <span class="text-[10px] text-slate-500 dark:text-slate-400">${recommendationLineHtml(p)}</span>
         </button>`).join('') : `<p class="text-[11px] text-slate-400 dark:text-slate-500">Todavía no hay plantas en esta carpa.</p>`;
       document.querySelectorAll('[data-modal-open-plant]').forEach(btn => btn.addEventListener('click', () => { closeTentModal(); openPlantModal(btn.dataset.modalOpenPlant); }));
     }
@@ -669,7 +1019,6 @@
     function openTentModal(tentId) {
       editingTentId = tentId || null;
       document.getElementById('tent-form').reset();
-      resetDeleteTentButton();
       document.getElementById('btn-delete-tent').hidden = !tentId;
       document.getElementById('tent-environment-section').hidden = !tentId;
       document.getElementById('tent-plants-section').hidden = !tentId;
@@ -685,11 +1034,48 @@
         document.getElementById('tent-form-notas').value = t.notas || '';
         renderTentEnvironmentCurrent(t);
         renderTentPlantsList(tentId);
+        setLuzScheduleFields(t.luzSchedule);
       } else {
         document.getElementById('tent-modal-title').textContent = 'Nueva carpa';
+        setLuzScheduleFields(null);
       }
       document.getElementById('modal-backdrop-tent').hidden = false;
     }
+
+    const LUZ_PRESET_HOURS = { '18/6': 18, '12/12': 12, '20/4': 20, '24/0': 24 };
+
+    function setLuzScheduleFields(schedule) {
+      document.getElementById('tent-form-luz-preset').value = (schedule && schedule.preset) || '';
+      document.getElementById('tent-form-luz-horas').value = (schedule && schedule.horasEncendido) || '';
+      document.getElementById('tent-form-luz-horainicio').value = (schedule && schedule.horaInicio) || '';
+      updateLuzFormVisibility();
+    }
+
+    function readLuzScheduleFromForm() {
+      const preset = document.getElementById('tent-form-luz-preset').value;
+      if (!preset) return null;
+      const horas = preset === 'personalizado' ? Number(document.getElementById('tent-form-luz-horas').value) : LUZ_PRESET_HOURS[preset];
+      const horaInicio = document.getElementById('tent-form-luz-horainicio').value;
+      return { preset, horasEncendido: horas, horaInicio: horaInicio || null };
+    }
+
+    function updateLuzFormVisibility() {
+      const preset = document.getElementById('tent-form-luz-preset').value;
+      document.getElementById('tent-form-luz-horas-wrap').hidden = preset !== 'personalizado';
+      document.getElementById('tent-form-luz-inicio-wrap').hidden = !preset || preset === '24/0';
+      const preview = document.getElementById('tent-form-luz-preview');
+      const estado = preset ? computeLuzEstado(readLuzScheduleFromForm()) : null;
+      if (estado) {
+        preview.textContent = estado.texto;
+        preview.className = 'text-[11px] font-semibold mt-1.5 ' + (estado.encendidaAhora ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400');
+        preview.hidden = false;
+      } else {
+        preview.hidden = true;
+      }
+    }
+    document.getElementById('tent-form-luz-preset').addEventListener('change', updateLuzFormVisibility);
+    document.getElementById('tent-form-luz-horas').addEventListener('input', updateLuzFormVisibility);
+    document.getElementById('tent-form-luz-horainicio').addEventListener('input', updateLuzFormVisibility);
     function closeTentModal() { document.getElementById('modal-backdrop-tent').hidden = true; }
     document.querySelectorAll('[data-close-tent]').forEach(btn => btn.addEventListener('click', closeTentModal));
     document.getElementById('modal-backdrop-tent').addEventListener('click', (e) => { if (e.target.id === 'modal-backdrop-tent') closeTentModal(); });
@@ -725,8 +1111,21 @@
         tipoLuz: document.getElementById('tent-form-tipoluz').value.trim(),
         extraccion: document.getElementById('tent-form-extraccion').value.trim(),
         notas: document.getElementById('tent-form-notas').value.trim(),
+        luzSchedule: readLuzScheduleFromForm(),
       };
+      if (payload.luzSchedule && payload.luzSchedule.preset !== '24/0' && !payload.luzSchedule.horaInicio) {
+        showToast('Falta la hora de encendido del horario de luz', true);
+        return;
+      }
+      if (payload.luzSchedule && payload.luzSchedule.preset === 'personalizado' && !payload.luzSchedule.horasEncendido) {
+        showToast('Falta las horas encendida del horario personalizado', true);
+        return;
+      }
       if (!payload.nombre) return;
+      if (editingTentId) {
+        const ok = await askConfirm({ variant: 'success', title: 'Guardar cambios', message: '¿Confirmás guardar los cambios en esta carpa?' });
+        if (!ok) return;
+      }
       try {
         if (editingTentId) { await apiFetch('/tents/' + editingTentId, { method: 'PUT', body: payload }); showToast('Carpa actualizada'); }
         else { await apiFetch('/tents', { method: 'POST', body: payload }); showToast('Carpa creada'); }
@@ -736,25 +1135,17 @@
     });
 
     document.getElementById('btn-delete-tent').addEventListener('click', async () => {
-      if (!deleteTentArmed) {
-        deleteTentArmed = true;
-        const btn = document.getElementById('btn-delete-tent');
-        btn.textContent = '¿Confirmar eliminación?'; btn.classList.add('bg-red-600', 'text-white');
-        return;
-      }
+      const ok = await askConfirm({ variant: 'danger', title: 'Eliminar carpa', message: '¿Estás seguro de que querés borrar esta carpa? Sus plantas quedarán sin carpa asignada. Esta acción no se puede deshacer.' });
+      if (!ok) return;
       try { await apiFetch('/tents/' + editingTentId, { method: 'DELETE' }); closeTentModal(); await loadEverything(); showToast('Carpa eliminada'); }
       catch (err) { showToast(err.message, true); }
     });
 
     /* ============================== MODAL PLANTA ============================== */
     let editingPlantId = null;
-    let deletePlantArmed = false;
     let modalRiegos = [];
+    let pendingPlantFoto = null;
 
-    function resetDeletePlantButton() {
-      const btn = document.getElementById('btn-delete-plant');
-      btn.textContent = 'Eliminar planta'; btn.classList.remove('bg-red-600', 'text-white'); deletePlantArmed = false;
-    }
     function populateTentSelect() {
       const select = document.getElementById('plant-form-tent');
       select.innerHTML = '<option value="">Sin carpa asignada</option>' + tentsData.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('');
@@ -762,11 +1153,16 @@
 
     async function openPlantModal(plantId, presetTentId) {
       editingPlantId = plantId || null;
+      pendingPlantFoto = null;
       document.getElementById('plant-form').reset();
-      resetDeletePlantButton();
       document.getElementById('btn-delete-plant').hidden = !plantId;
       populateTentSelect();
       document.getElementById('plant-modal-riegos-hint').hidden = !!plantId;
+      const preview = document.getElementById('plant-form-foto-preview');
+      const deleteBtn = document.getElementById('plant-form-foto-delete');
+      preview.hidden = true;
+      preview.src = '';
+      deleteBtn.hidden = true;
 
       if (plantId) {
         let p;
@@ -779,6 +1175,7 @@
         document.getElementById('plant-form-etapa').value = p.etapa || 'Enraizado';
         document.getElementById('plant-form-notas').value = p.notas || '';
         modalRiegos = (p.waterings || []).map(w => Object.assign({}, w));
+        if (p.fotoUrl) { preview.src = versionedFotoUrl(p); preview.hidden = false; deleteBtn.hidden = false; }
       } else {
         document.getElementById('plant-modal-title').textContent = 'Nueva planta';
         document.getElementById('plant-form-tent').value = presetTentId || '';
@@ -786,16 +1183,78 @@
         document.getElementById('plant-form-etapa').value = 'Enraizado';
         modalRiegos = [];
       }
+      updateGeneticaInfo();
       renderModalRiegos();
       document.getElementById('modal-backdrop-plant').hidden = false;
     }
+
+    document.getElementById('plant-form-foto').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (file.size > 4 * 1024 * 1024) { showToast('La imagen no puede superar 4MB', true); e.target.value = ''; return; }
+      pendingPlantFoto = file;
+      const preview = document.getElementById('plant-form-foto-preview');
+      preview.src = URL.createObjectURL(file);
+      preview.hidden = false;
+      document.getElementById('plant-form-foto-delete').hidden = false;
+    });
+
+    document.getElementById('plant-form-foto-delete').addEventListener('click', async () => {
+      const preview = document.getElementById('plant-form-foto-preview');
+      const deleteBtn = document.getElementById('plant-form-foto-delete');
+      if (pendingPlantFoto) {
+        // Selección local todavía no guardada — se descarta sin llamar a la API.
+        pendingPlantFoto = null;
+        document.getElementById('plant-form-foto').value = '';
+        preview.hidden = true; preview.src = ''; deleteBtn.hidden = true;
+        return;
+      }
+      if (!editingPlantId) return;
+      const ok = await askConfirm({ variant: 'danger', title: 'Eliminar foto', message: '¿Estás seguro de que querés borrar la foto de portada de esta planta? Esta acción no se puede deshacer.' });
+      if (!ok) return;
+      try {
+        await apiFetch('/plants/' + editingPlantId + '/photo', { method: 'DELETE' });
+        preview.hidden = true; preview.src = ''; deleteBtn.hidden = true;
+        showToast('Foto eliminada');
+      } catch (err) { showToast(err.message, true); }
+    });
+
+    document.getElementById('plant-form-genetica').addEventListener('input', updateGeneticaInfo);
+    function updateGeneticaInfo() {
+      const strain = findStrainGuide(document.getElementById('plant-form-genetica').value);
+      const info = document.getElementById('plant-form-genetica-info');
+      const presetBox = document.getElementById('plant-form-strain-preset');
+      if (strain) {
+        info.textContent = strain.nombre + ' — floración estimada ' + strain.semanasMin + '-' + strain.semanasMax + ' semanas. ' + strain.notas;
+        info.hidden = false;
+        document.getElementById('plant-form-strain-preset-img').src = strainIllustrationDataUri(strain);
+        presetBox.hidden = false;
+      } else {
+        info.hidden = true;
+        presetBox.hidden = true;
+      }
+    }
+
+    document.getElementById('plant-form-strain-preset-use').addEventListener('click', async () => {
+      const strain = findStrainGuide(document.getElementById('plant-form-genetica').value);
+      if (!strain) return;
+      const dataUri = strainIllustrationDataUri(strain);
+      const blob = await (await fetch(dataUri)).blob();
+      pendingPlantFoto = blob;
+      document.getElementById('plant-form-foto').value = '';
+      const preview = document.getElementById('plant-form-foto-preview');
+      preview.src = dataUri;
+      preview.hidden = false;
+      document.getElementById('plant-form-foto-delete').hidden = false;
+      showToast('Ilustración de ' + strain.nombre + ' lista — se guarda junto con la planta');
+    });
+
     function closePlantModal() { document.getElementById('modal-backdrop-plant').hidden = true; }
     document.querySelectorAll('[data-close-plant]').forEach(btn => btn.addEventListener('click', closePlantModal));
     document.getElementById('modal-backdrop-plant').addEventListener('click', (e) => { if (e.target.id === 'modal-backdrop-plant') closePlantModal(); });
 
     function renderModalRiegos() {
       const container = document.getElementById('plant-modal-riegos');
-      const disabled = !editingPlantId;
       container.innerHTML = modalRiegos.length ? modalRiegos.map((r, idx) => `
         <div class="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 flex flex-col gap-1.5">
           <div class="flex items-center justify-between">
@@ -813,6 +1272,8 @@
         const idx = Number(btn.dataset.removeModalRiego);
         const r = modalRiegos[idx];
         if (r.id && editingPlantId) {
+          const ok = await askConfirm({ variant: 'danger', title: 'Eliminar riego', message: '¿Estás seguro de que querés borrar este riego? Esta acción no se puede deshacer.' });
+          if (!ok) return;
           try { await apiFetch('/plants/' + editingPlantId + '/waterings/' + r.id, { method: 'DELETE' }); } catch (err) { showToast(err.message, true); return; }
         }
         modalRiegos.splice(idx, 1); renderModalRiegos();
@@ -821,16 +1282,19 @@
         const [idx, field] = input.dataset.modalRiegoField.split('|');
         modalRiegos[idx][field] = input.value;
       }));
-      document.getElementById('btn-add-modal-riego').disabled = disabled;
     }
 
     document.getElementById('btn-add-modal-riego').addEventListener('click', async () => {
-      if (!editingPlantId) { showToast('Guardá la planta primero para poder cargar riegos', true); return; }
-      try {
-        const created = await apiFetch('/plants/' + editingPlantId + '/waterings', { method: 'POST', body: { fecha: new Date().toISOString().split('T')[0] } });
-        modalRiegos.push(created);
+      if (editingPlantId) {
+        try {
+          const created = await apiFetch('/plants/' + editingPlantId + '/waterings', { method: 'POST', body: { fecha: new Date().toISOString().split('T')[0] } });
+          modalRiegos.push(created);
+          renderModalRiegos();
+        } catch (err) { showToast(err.message, true); }
+      } else {
+        modalRiegos.push({ fecha: new Date().toISOString().split('T')[0], producto: '', ph: '', ec: '' });
         renderModalRiegos();
-      } catch (err) { showToast(err.message, true); }
+      }
     });
 
     // Guarda cambios de un riego existente al perder foco (autosave simple).
@@ -855,26 +1319,44 @@
         notas: document.getElementById('plant-form-notas').value.trim(),
       };
       if (!payload.nombre) return;
+      const wasEditing = !!editingPlantId;
+      if (wasEditing) {
+        const ok = await askConfirm({ variant: 'success', title: 'Guardar cambios', message: '¿Confirmás guardar los cambios en esta planta?' });
+        if (!ok) return;
+      }
       try {
-        if (editingPlantId) { await apiFetch('/plants/' + editingPlantId, { method: 'PUT', body: payload }); showToast('Planta actualizada'); }
-        else {
+        let plantId;
+        if (wasEditing) {
+          await apiFetch('/plants/' + editingPlantId, { method: 'PUT', body: payload });
+          plantId = editingPlantId;
+          showToast('Planta actualizada');
+        } else {
           const created = await apiFetch('/plants', { method: 'POST', body: payload });
+          plantId = created.id;
           editingPlantId = created.id;
-          showToast('Planta creada — ya podés cargarle riegos');
+          const pendingRiegos = modalRiegos.filter(r => !r.id);
+          if (pendingRiegos.length) {
+            const results = await Promise.allSettled(pendingRiegos.map(r => apiFetch('/plants/' + plantId + '/waterings', { method: 'POST', body: { fecha: r.fecha, producto: r.producto, ph: r.ph, ec: r.ec } })));
+            const failed = results.filter(r => r.status === 'rejected').length;
+            if (failed) showToast(failed + ' riego(s) no se pudieron guardar', true);
+          }
+          showToast('Planta creada');
+        }
+        if (pendingPlantFoto) {
+          const formData = new FormData();
+          formData.append('foto', pendingPlantFoto, pendingPlantFoto.name || 'ilustracion.svg');
+          try { await apiUpload('/plants/' + plantId + '/photo', formData); }
+          catch (err) { showToast('Planta guardada, pero la foto falló: ' + err.message, true); }
         }
         closePlantModal();
         await loadEverything();
-        if (currentView === 'plant-detail' && currentPlantId === editingPlantId) openPlantDetail(editingPlantId);
+        if (currentView === 'plant-detail' && currentPlantId === plantId) openPlantDetail(plantId, { noHistory: true });
       } catch (err) { showToast(err.message, true); }
     });
 
     document.getElementById('btn-delete-plant').addEventListener('click', async () => {
-      if (!deletePlantArmed) {
-        deletePlantArmed = true;
-        const btn = document.getElementById('btn-delete-plant');
-        btn.textContent = '¿Confirmar eliminación?'; btn.classList.add('bg-red-600', 'text-white');
-        return;
-      }
+      const ok = await askConfirm({ variant: 'danger', title: 'Eliminar planta', message: '¿Estás seguro de que querés borrar esta planta? Esto también borra sus riegos y fotos. Esta acción no se puede deshacer.' });
+      if (!ok) return;
       try {
         await apiFetch('/plants/' + editingPlantId, { method: 'DELETE' });
         closePlantModal();
@@ -884,30 +1366,42 @@
       } catch (err) { showToast(err.message, true); }
     });
 
-    /* ============================== RIEGO (timeline global, filtro por planta) ============================== */
+    /* ============================== RIEGO (timeline global, filtro por carpa y por planta) ============================== */
+    function renderWateringTentChips() {
+      const chips = [{ id: 'all', label: 'Todas las carpas' }, ...tentsData.map(t => ({ id: t.id, label: t.nombre }))];
+      document.getElementById('watering-tent-chips').innerHTML = chips.map(c => `
+        <button type="button" data-tchip="${c.id}" class="whitespace-nowrap text-[11px] font-semibold px-3 py-1.5 rounded-full border transition ${wateringTentFilter === c.id ? 'bg-cultivo-700 text-white border-cultivo-700' : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'}">${c.label}</button>`).join('');
+      document.querySelectorAll('#watering-tent-chips [data-tchip]').forEach(btn => btn.addEventListener('click', () => { wateringTentFilter = btn.dataset.tchip; wateringFilter = 'all'; renderWatering(); }));
+    }
+
     function renderWateringChips() {
-      const chips = [{ id: 'all', label: 'Todas' }, ...plantsData.map(p => ({ id: p.id, label: p.nombre }))];
+      const plantsInTent = wateringTentFilter === 'all' ? plantsData : plantsData.filter(p => p.tentId === wateringTentFilter);
+      const chips = [{ id: 'all', label: 'Todas' }, ...plantsInTent.map(p => ({ id: p.id, label: p.nombre }))];
       document.getElementById('watering-filter-chips').innerHTML = chips.map(c => `
         <button type="button" data-chip="${c.id}" class="whitespace-nowrap text-[11px] font-semibold px-3 py-1.5 rounded-full border transition ${wateringFilter === c.id ? 'bg-cultivo-600 text-white border-cultivo-600' : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'}">${c.label}</button>`).join('');
       document.querySelectorAll('#watering-filter-chips [data-chip]').forEach(btn => btn.addEventListener('click', () => { wateringFilter = btn.dataset.chip; renderWatering(); }));
     }
 
     async function renderWatering() {
+      renderWateringTentChips();
       renderWateringChips();
       const timeline = document.getElementById('watering-timeline');
-      const targets = wateringFilter === 'all' ? plantsData : plantsData.filter(p => p.id === wateringFilter);
+      const plantsInTent = wateringTentFilter === 'all' ? plantsData : plantsData.filter(p => p.tentId === wateringTentFilter);
+      const targets = wateringFilter === 'all' ? plantsInTent : plantsInTent.filter(p => p.id === wateringFilter);
       if (!targets.length) { timeline.innerHTML = `<p class="px-4 py-6 text-center text-xs text-slate-400 dark:text-slate-500">Sin plantas todavía.</p>`; return; }
       timeline.innerHTML = `<p class="px-4 py-6 text-center text-xs text-slate-400 dark:text-slate-500">Cargando...</p>`;
       try {
-        const lists = await Promise.all(targets.map(p => apiFetch('/plants/' + p.id + '/waterings').then(ws => ws.map(w => Object.assign({ plantNombre: p.nombre }, w)))));
+        const lists = await Promise.all(targets.map(p => apiFetch('/plants/' + p.id + '/waterings').then(ws => ws.map(w => Object.assign({ plantNombre: p.nombre, plantId: p.id, tentId: p.tentId }, w)))));
         const all = lists.flat().sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
-        timeline.innerHTML = all.length ? all.map(w => `
-          <div class="px-4 py-3 flex items-start gap-3">
+        timeline.innerHTML = all.length ? all.map(w => {
+          const tentName = (tentsData.find(t => t.id === w.tentId) || {}).nombre || 'Sin carpa';
+          return `
+          <button type="button" data-watering-plant="${w.plantId}" class="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
             <div class="w-1 self-stretch rounded-full bg-teal-400 dark:bg-teal-600"></div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between gap-2">
-                <p class="text-xs font-bold text-slate-700 dark:text-slate-200">${w.plantNombre}</p>
-                <span class="text-[10px] font-mono text-slate-400 dark:text-slate-500">${w.fecha || ''}</span>
+                <p class="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">${w.plantNombre} <span class="font-normal text-slate-400 dark:text-slate-500">· ${tentName}</span></p>
+                <span class="text-[10px] font-mono text-slate-400 dark:text-slate-500 shrink-0">${w.fecha || ''}</span>
               </div>
               <p class="text-[11px] text-slate-500 dark:text-slate-400">${w.producto || ''} ${w.cantidad ? '· ' + w.cantidad : ''}</p>
               <div class="flex gap-1.5 mt-1">
@@ -915,7 +1409,9 @@
                 <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">EC ${w.ec || '—'}</span>
               </div>
             </div>
-          </div>`).join('') : `<p class="px-4 py-6 text-center text-xs text-slate-400 dark:text-slate-500">Sin riegos registrados todavía.</p>`;
+          </button>`;
+        }).join('') : `<p class="px-4 py-6 text-center text-xs text-slate-400 dark:text-slate-500">Sin riegos registrados todavía.</p>`;
+        document.querySelectorAll('[data-watering-plant]').forEach(btn => btn.addEventListener('click', () => openPlantDetail(btn.dataset.wateringPlant)));
       } catch (err) { showToast(err.message, true); }
     }
 
@@ -956,8 +1452,23 @@
             <p class="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">${h.cepa || '—'}</p>
             <p class="text-[10px] text-slate-400 dark:text-slate-500 font-mono">${h.fecha || ''} · ${h.pesoHumedo ?? '—'}g húmedo → ${h.pesoSeco ?? '—'}g seco</p>
           </div>
-          <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 whitespace-nowrap">${h.curado}</span>
+          <div class="flex items-center gap-2 shrink-0">
+            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 whitespace-nowrap">${h.curado}</span>
+            <button type="button" data-delete-harvest="${h.id}" title="Eliminar cosecha" class="text-slate-300 hover:text-red-500 transition text-xs"><i class="fa-solid fa-trash"></i></button>
+          </div>
         </div>`).join('') : `<p class="text-center text-xs text-slate-400 dark:text-slate-500 py-4">Sin cosechas registradas todavía.</p>`;
+      document.querySelectorAll('[data-delete-harvest]').forEach(btn => btn.addEventListener('click', async () => {
+        const id = btn.dataset.deleteHarvest;
+        const h = harvestsData.find(x => x.id === id);
+        const ok = await askConfirm({ variant: 'danger', title: 'Eliminar cosecha', message: '¿Estás seguro de que querés borrar esta cosecha (' + (h && h.cepa ? h.cepa : 'sin cepa') + ')? Esta acción no se puede deshacer.' });
+        if (!ok) return;
+        try {
+          await apiFetch('/harvests/' + id, { method: 'DELETE' });
+          harvestsData = await apiFetch('/harvests');
+          renderHarvest();
+          showToast('Cosecha eliminada');
+        } catch (err) { showToast(err.message, true); }
+      }));
 
       const withPeso = harvestsData.filter(h => h.pesoSeco);
       const max = Math.max(1, ...withPeso.map(h => h.pesoSeco));
@@ -981,13 +1492,25 @@
       const targets = photosFilter === 'all' ? plantsData : plantsData.filter(p => p.id === photosFilter);
       if (!targets.length) { grid.innerHTML = `<p class="col-span-3 text-center text-xs text-slate-400 dark:text-slate-500 py-6">Sin plantas todavía.</p>`; return; }
       try {
-        const lists = await Promise.all(targets.map(p => apiFetch('/plants/' + p.id + '/photos')));
+        const lists = await Promise.all(targets.map(p => apiFetch('/plants/' + p.id + '/photos').then(ws => ws.map(ph => Object.assign({ plantId: p.id }, ph)))));
         const all = lists.flat();
         grid.innerHTML = all.length ? all.map(ph => `
-          <a href="${ph.url}" target="_blank" rel="noopener" class="aspect-square rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 overflow-hidden relative block">
-            <img src="${ph.url}" class="w-full h-full object-cover" loading="lazy">
-            <span class="absolute bottom-1 right-1.5 text-[9px] font-mono text-white bg-black/50 px-1 rounded">${ph.fecha}</span>
-          </a>`).join('') : `<p class="col-span-3 text-center text-xs text-slate-400 dark:text-slate-500 py-6">Sin fotos todavía.</p>`;
+          <div class="aspect-square rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 overflow-hidden relative">
+            <a href="${ph.url}" target="_blank" rel="noopener" class="block w-full h-full">
+              <img src="${ph.url}" class="w-full h-full object-cover" loading="lazy">
+            </a>
+            <span class="absolute bottom-1 right-1.5 text-[9px] font-mono text-white bg-black/50 px-1 rounded pointer-events-none">${ph.fecha}</span>
+            <button type="button" data-delete-photo="${ph.id}" data-photo-plant="${ph.plantId}" title="Borrar foto" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center"><i class="fa-solid fa-xmark text-[10px]"></i></button>
+          </div>`).join('') : `<p class="col-span-3 text-center text-xs text-slate-400 dark:text-slate-500 py-6">Sin fotos todavía.</p>`;
+        document.querySelectorAll('[data-delete-photo]').forEach(btn => btn.addEventListener('click', async () => {
+          const ok = await askConfirm({ variant: 'danger', title: 'Eliminar foto', message: '¿Estás seguro de que querés borrar esta foto? Esta acción no se puede deshacer.' });
+          if (!ok) return;
+          try {
+            await apiFetch('/plants/' + btn.dataset.photoPlant + '/photos/' + btn.dataset.deletePhoto, { method: 'DELETE' });
+            renderPhotos();
+            showToast('Foto eliminada');
+          } catch (err) { showToast(err.message, true); }
+        }));
       } catch (err) { showToast(err.message, true); }
     }
   </script>

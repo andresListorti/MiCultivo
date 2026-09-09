@@ -47,12 +47,20 @@ If you change any file under `api/`, `src/`, or `index.html`, you must
 redeploy for it to take effect; editing local files alone does nothing to
 the live site.
 
-**Local testing**: there's no wired-up local dev server (`npm run dev` runs
-`vercel dev`, which also needs the CLI logged in). To sanity-check backend
-changes before deploying, write a throwaway script that does
-`import app from '../src/app'; app.listen(0, ...)` and hit it with `fetch`
-(this is how earlier debugging was done — see git history for the pattern,
-the scratch files were deleted afterward). Run with `npx tsx <script>.ts`.
+**Local testing**: `npm run dev` (`vercel dev`) still doesn't work — the CLI
+isn't logged in. Instead, `_local-dev.ts` (repo root, untracked/not
+gitignored on purpose so it survives across sessions) does
+`import app from './src/app'; app.listen(3000, ...)` plus `import
+'dotenv/config'` so it picks up a local `.env` (gitignored) for secrets that
+only exist as env vars in production, e.g. `BLOB_READ_WRITE_TOKEN` (see
+"Photo uploads" below). Run with `npx tsx _local-dev.ts`, then open
+`http://localhost:3000` — it's the real app against real Firestore/Storage,
+not a mock. Kill-and-restart pattern on Windows since `tsx` doesn't hot
+reload: `Get-NetTCPConnection -LocalPort 3000 -State Listen | ForEach-Object
+{ Stop-Process -Id $_.OwningProcess -Force }`, then relaunch. For one-off
+scripted checks (hitting specific endpoints with `fetch`, minting a test ID
+token via `authAdmin.createCustomToken` + the Identity Toolkit REST
+exchange), write a throwaway script in the same style and delete it after.
 
 ## Architecture
 
@@ -151,14 +159,91 @@ kept in the repo for reference but shouldn't need to run again.
   (`ETAPAS` array in `src/routes/plants.ts`).
 - `plants/{id}/waterings/{id}` and `plants/{id}/photos/{id}` — true
   subcollections (fecha, producto/pH/EC for waterings; fecha/url/nota for
-  photos — photo upload itself is not implemented, see below).
+  photos — see "Photo uploads" below for how `url` gets populated).
 - `harvests/{id}` — root collection (not a plant subcollection) with a
   `plantId` field, so the yield-analytics view can query/compare across
   plants without a Firestore collection-group query.
 - Deleting a tent or plant cascades: deleting a tent unassigns (`tentId:
   null`) its plants and wipes its `environmentReadings`; deleting a plant
   wipes its `waterings` and `photos` subcollections
-  (`src/lib/deleteCollection.ts`).
+  (`src/lib/deleteCollection.ts`) **and** its Storage files (see below).
+- `plants/{id}` also has `etapaDesde` (ISO date, stamped on create and
+  re-stamped only when `etapa` actually changes via `PUT` — see the diff
+  logic in `plants.ts`'s `PUT /:id`) and `fotoUrl` (cover photo, `null` until
+  set). `tents/{id}` also has `luzSchedule` (`{preset, horasEncendido,
+  horaInicio}` or `null` — see "Light schedule" below).
+
+### Photo uploads (Vercel Blob, not Firebase Storage)
+
+Firebase Storage was evaluated first (bucket name is even still sitting in
+`index.html`'s `firebaseConfig`) but the project's Firebase plan is Spark
+(free) and enabling Storage requires upgrading to Blaze (a linked billing
+card) — the user explicitly ruled that out. **Vercel Blob** is what's
+actually wired up instead: free on the Hobby plan (1GB storage / 10GB
+transfer per month, no card), and the project's already on Vercel.
+
+- `src/lib/storage.ts`: thin wrapper over `@vercel/blob`'s `put`/`del`/`list`.
+  `uploadImageBuffer(path, buffer, mimetype)` uploads with `access: 'public',
+  allowOverwrite: true` (overwrite matters for the cover photo, which always
+  reuses the same path). `deleteBlobUrl`/`deleteBlobFolder` clean up on
+  delete. Allowed mimetypes include `image/svg+xml` on purpose — the
+  per-strain "default cover" illustrations (see below) are generated
+  client-side and uploaded through this same path, not just real photos.
+- `src/lib/upload.ts`: `multer` (memory storage, 4MB cap — Vercel's function
+  body limit is ~4.5MB) plus an error handler that turns
+  `LIMIT_FILE_SIZE` into a clean 400 instead of a 500.
+- Storage path scheme: `plants/{plantId}/cover` (portada, one stable path,
+  overwritten on re-upload — **this means the URL never changes**, so every
+  place that renders `fotoUrl` as an `<img src>` must cache-bust it with
+  `?v=<actualizadoEn>` — see `versionedFotoUrl()` in `index.html` — or the
+  browser will keep showing the old cached image after a re-upload) and
+  `plants/{plantId}/photos/{photoDocId}` (dated gallery, one object per
+  doc). Deleting a plant wipes the whole `plants/{plantId}/` prefix via
+  `deleteBlobFolder`.
+- Endpoints: `POST /api/plants/:id/photo` (cover, multipart field `foto`) and
+  `DELETE /api/plants/:id/photo` (clear cover); `POST
+  /api/plants/:plantId/photos/upload` (gallery, multipart) alongside the
+  original JSON-only `POST /api/plants/:plantId/photos` (kept for
+  `scripts/seed.ts` and manual URL entries). All gated by the same
+  `ownerId`/`requirePlantOwnership` checks as everything else.
+- **Vercel project setup**: a Blob store must exist and be connected to the
+  project (Vercel dashboard → project → Storage → Create Database → Blob →
+  **must pick "Public" access at creation time — this cannot be changed
+  later**; a first attempt here accidentally created a Private store, which
+  rejects `access:'public'` uploads, and had to be deleted and recreated).
+  Once connected, production/preview get `BLOB_STORE_ID` + a rotating OIDC
+  token automatically — **no manual env var needed for the deployed app**.
+  Local dev has no OIDC token, so it needs a static `BLOB_READ_WRITE_TOKEN`
+  in `.env` (copy it from the store's own page → ".env.local" tab in the
+  dashboard, not the project's general Environment Variables list, which
+  only shows `BLOB_STORE_ID`/`BLOB_WEBHOOK_PUBLIC_KEY`).
+
+### Growing recommendations (100% static, client-side, no AI)
+
+`index.html` has `ETAPA_GUIDE` (generic care tips per `etapa`) and
+`STRAIN_GUIDE` (~17 well-known strains with a rough flowering-week range and
+notes, matched against the free-text `genetica` field via substring
+matching in `findStrainGuide`). Both are hand-curated constants in the
+script, not fetched from anywhere — deliberately, since real strain photos
+would be a copyright problem and an AI call is unnecessary complexity for a
+personal 2-user app. `getPlantRecommendation(plant)` combines the etapa tip
+with the strain match and, if `etapa === 'Floración'` and `etapaDesde` is
+set, an estimated days-remaining. Shown in the tent modal's plant list and
+the plant detail view. Each strain also has a small original SVG
+illustration (`strainIllustrationDataUri`, a two-leaflet mark on a
+per-strain color, **not a real photo**) offered as a preselectable cover
+photo when creating a plant with a recognized strain name.
+
+### Light schedule (`luzSchedule` on `tents/{id}`)
+
+A preset (`18/6`, `12/12`, `20/4`, `24/0`, or `personalizado` with a custom
+hour count) plus a `horaInicio` (HH:MM, not required for `24/0`). Validated
+and normalized server-side in `tents.ts` (`validateLuzSchedule`/
+`normalizeLuzSchedule`). The client computes the actual on/off status
+purely from these two numbers (`computeLuzEstado` in `index.html`, handles
+wrapping past midnight) — there's no cron/scheduled job, it's just "is the
+current wall-clock time inside the on-window" evaluated at render time, so
+it's only ever as fresh as the last time that view re-rendered.
 
 ### Auth accounts
 
@@ -189,7 +274,9 @@ unless you call `sendEmailVerification`.
 
 ## Known gaps (not bugs, just unfinished)
 
-- No real photo upload: `POST /api/plants/:id/photos` only accepts an
-  already-hosted `url` — there's no Storage upload wired up client-side.
 - "Próximos riegos sugeridos" on the dashboard is a static/hardcoded list,
   not computed from real watering history.
+- Browser-history integration (`popstate`/`pushState` in `index.html`)
+  covers the 4 main tab views + plant detail; it doesn't try to restore
+  scroll position or reopen a modal (tent/plant edit, confirm dialog) that
+  was open when the user navigated away.
