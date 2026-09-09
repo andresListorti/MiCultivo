@@ -17,7 +17,7 @@ async function removeDuplicates() {
 
   // Obtener todas las plantas
   const plantsSnap = await db.collection('plants').get();
-  const plants = plantsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const plants = plantsSnap.docs.map(d => ({ id: d.id, ...d.data() }) as Record<string, any>);
 
   console.log(`📊 Total de plantas: ${plants.length}`);
 
