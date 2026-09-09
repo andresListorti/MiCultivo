@@ -44,7 +44,7 @@ router.get('/', async (req: AuthedRequest, res) => {
     db.collection('plants').where('ownerId', '==', req.uid).get(),
   ]);
 
-  const plantsByTent = new Map<string, any[]>();
+  const plantsByTent = new Map<string | null, any[]>();
   plantsSnap.forEach((doc) => {
     const data = doc.data();
     const list = plantsByTent.get(data.tentId) || [];
@@ -52,12 +52,30 @@ router.get('/', async (req: AuthedRequest, res) => {
     plantsByTent.set(data.tentId, list);
   });
 
-  const tents = tentsSnap.docs
+  const tents: any[] = tentsSnap.docs
     .map((doc) => {
       const data = doc.data();
       return { id: doc.id, ...data, plants: plantsByTent.get(doc.id) || [] };
     })
     .sort((a: any, b: any) => (a.creadoEn || '').localeCompare(b.creadoEn || ''));
+
+  const orphanedPlants = plantsByTent.get(null) || [];
+  if (orphanedPlants.length > 0) {
+    tents.push({
+      id: '__unassigned__',
+      nombre: 'Sin carpa asignada',
+      ownerId: req.uid,
+      notas: '',
+      dimensiones: '',
+      tipoLuz: '',
+      extraccion: '',
+      luzSchedule: null,
+      ambiente: null,
+      creadoEn: '',
+      actualizadoEn: '',
+      plants: orphanedPlants,
+    });
+  }
 
   res.json(tents);
 });

@@ -747,6 +747,7 @@
         btn.classList.toggle('border-transparent', !active);
       });
       currentView = id;
+      if (id === 'photos') renderPhotos();
       window.scrollTo({ top: 0 });
       if (!opts.noHistory) {
         const state = { view: id, plantId: id === 'plant-detail' ? currentPlantId : null };
@@ -1563,20 +1564,37 @@
       if (!targets.length) { grid.innerHTML = `<p class="col-span-3 text-center text-xs text-slate-400 dark:text-slate-500 py-6">Sin plantas todavía.</p>`; return; }
       try {
         const lists = await Promise.all(targets.map(p => apiFetch('/plants/' + p.id + '/photos').then(ws => ws.map(ph => Object.assign({ plantId: p.id }, ph)))));
-        const all = lists.flat();
+        const galleryPhotos = lists.flat();
+        // La foto de portada (fotoUrl) vive aparte de la bitácora con fecha —
+        // se sintetiza acá como una entrada más para que también se vea en
+        // esta solapa, marcada como "Portada" y borrable con su propio endpoint.
+        const coverPhotos = targets.filter(p => p.fotoUrl).map(p => ({
+          id: 'cover',
+          plantId: p.id,
+          url: versionedFotoUrl(p),
+          fecha: (p.actualizadoEn || p.creadoEn || p.fecha || '').split('T')[0],
+          isCover: true,
+        }));
+        const all = [...coverPhotos, ...galleryPhotos].sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
         grid.innerHTML = all.length ? all.map(ph => `
           <div class="aspect-square rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 overflow-hidden relative">
             <a href="${ph.url}" target="_blank" rel="noopener" class="block w-full h-full">
               <img src="${ph.url}" class="w-full h-full object-cover" loading="lazy">
             </a>
+            ${ph.isCover ? '<span class="absolute top-1 left-1 text-[8px] font-bold text-white bg-cultivo-600/90 px-1 rounded pointer-events-none">Portada</span>' : ''}
             <span class="absolute bottom-1 right-1.5 text-[9px] font-mono text-white bg-black/50 px-1 rounded pointer-events-none">${ph.fecha}</span>
-            <button type="button" data-delete-photo="${ph.id}" data-photo-plant="${ph.plantId}" title="Borrar foto" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center"><i class="fa-solid fa-xmark text-[10px]"></i></button>
+            <button type="button" data-delete-photo="${ph.id}" data-photo-plant="${ph.plantId}" data-is-cover="${ph.isCover ? '1' : ''}" title="Borrar foto" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center"><i class="fa-solid fa-xmark text-[10px]"></i></button>
           </div>`).join('') : `<p class="col-span-3 text-center text-xs text-slate-400 dark:text-slate-500 py-6">Sin fotos todavía.</p>`;
         document.querySelectorAll('[data-delete-photo]').forEach(btn => btn.addEventListener('click', async () => {
-          const ok = await askConfirm({ variant: 'danger', title: 'Eliminar foto', message: '¿Estás seguro de que querés borrar esta foto? Esta acción no se puede deshacer.' });
+          const isCover = btn.dataset.isCover === '1';
+          const ok = await askConfirm({ variant: 'danger', title: 'Eliminar foto', message: isCover ? '¿Estás seguro de que querés borrar la foto de portada de esta planta? Esta acción no se puede deshacer.' : '¿Estás seguro de que querés borrar esta foto? Esta acción no se puede deshacer.' });
           if (!ok) return;
           try {
-            await apiFetch('/plants/' + btn.dataset.photoPlant + '/photos/' + btn.dataset.deletePhoto, { method: 'DELETE' });
+            if (isCover) {
+              await apiFetch('/plants/' + btn.dataset.photoPlant + '/photo', { method: 'DELETE' });
+            } else {
+              await apiFetch('/plants/' + btn.dataset.photoPlant + '/photos/' + btn.dataset.deletePhoto, { method: 'DELETE' });
+            }
             renderPhotos();
             showToast('Foto eliminada');
           } catch (err) { showToast(err.message, true); }
