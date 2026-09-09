@@ -32,10 +32,10 @@ comandos, ver **CLAUDE.md**.
 
 ## Cómo redeployar
 
-No hay git remoto conectado a Vercel ni CI/CD — cada deploy es una subida
-manual del árbol completo de archivos vía la herramienta `deploy_to_vercel`
-del plugin de Vercel para MCP (el `vercel` CLI local no está logueado). Ver
-CLAUDE.md → "Deploying" para el detalle.
+Git remoto conectado (`origin` → GitHub, repo `andresListorti/MiCultivo`)
+con la integración nativa de Vercel: pushear a `main` dispara un deploy a
+producción automáticamente (CI/CD). El `vercel` CLI local sigue sin estar
+logueado. Ver CLAUDE.md → "Deploying" para el detalle.
 
 ## Estructura
 

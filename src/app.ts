@@ -6,7 +6,7 @@ import { requireAuth } from './middleware/auth';
 import tentsRouter from './routes/tents';
 import plantsRouter from './routes/plants';
 import harvestsRouter from './routes/harvests';
-import { FAVICON_SVG, ICON_32_PNG, ICON_192_PNG, APPLE_TOUCH_ICON_PNG } from './lib/icons';
+import { FAVICON_SVG, ICON_32_PNG, ICON_192_PNG, ICON_512_PNG, APPLE_TOUCH_ICON_PNG } from './lib/icons';
 
 const app = express();
 
@@ -38,16 +38,23 @@ const INDEX_HTML = loadIndexHtml();
 app.get('/favicon.svg', (_req, res) => res.type('image/svg+xml').send(FAVICON_SVG));
 app.get('/icon-32.png', (_req, res) => res.type('png').send(ICON_32_PNG));
 app.get('/icon-192.png', (_req, res) => res.type('png').send(ICON_192_PNG));
+app.get('/icon-512.png', (_req, res) => res.type('png').send(ICON_512_PNG));
 app.get('/apple-touch-icon.png', (_req, res) => res.type('png').send(APPLE_TOUCH_ICON_PNG));
 app.get('/site.webmanifest', (_req, res) => res.type('application/manifest+json').json({
   name: 'Mi Cultivo',
   short_name: 'Mi Cultivo',
+  description: 'Seguimiento personal de cultivo de cannabis',
   start_url: '/',
+  scope: '/',
   display: 'standalone',
-  background_color: '#052e16',
+  orientation: 'portrait-primary',
+  background_color: '#ffffff',
   theme_color: '#14532d',
   icons: [
-    { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+    { src: '/icon-32.png', sizes: '32x32', type: 'image/png', purpose: 'any' },
+    { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+    { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+    { src: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png', purpose: 'any' },
   ],
 }));
 

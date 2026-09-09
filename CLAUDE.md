@@ -38,14 +38,17 @@ setup — `src/firebaseAdmin.ts` looks for `FIREBASE_SERVICE_ACCOUNT` (env var,
 JSON string — how Vercel production is configured) first, then falls back to
 that local file.
 
-**Deploying**: the `deploy` npm script (`vercel deploy --prod`) will not work
-as-is — the local `vercel` CLI is not logged in on this machine. Actual
-deploys so far were done via the Vercel MCP plugin's `deploy_to_vercel` tool
-(uploads the full file tree, target `production`). There is no git remote
-connected to Vercel and no CI/CD — every deploy is a manual full-tree upload.
-If you change any file under `api/`, `src/`, or `index.html`, you must
-redeploy for it to take effect; editing local files alone does nothing to
-the live site.
+**Deploying**: as of 2026-09-09 this repo has a GitHub remote
+(`origin` → `https://github.com/andresListorti/MiCultivo.git`) with Vercel's
+native Git integration connected — pushing to `main` triggers a production
+deploy automatically (CI/CD). **Commit and push to deploy**; that's now the
+normal path, not the Vercel MCP plugin's `deploy_to_vercel` tool (manual
+full-file-tree upload), which was the only option before the GitHub link
+existed and should be treated as a fallback only. The `deploy` npm script
+(`vercel deploy --prod`) still won't work as-is — the local `vercel` CLI is
+not logged in on this machine. If you change any file under `api/`, `src/`,
+or `index.html`, it takes effect only after that commit is pushed to `main`;
+editing local files alone does nothing to the live site.
 
 **Local testing**: `npm run dev` (`vercel dev`) still doesn't work — the CLI
 isn't logged in. Instead, `_local-dev.ts` (repo root, untracked/not
