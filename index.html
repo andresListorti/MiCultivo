@@ -886,8 +886,13 @@
     }
 
     function renderHomeByCarpa() {
-      const orphan = plantsData.filter(p => !p.tentId || !tentsData.find(t => t.id === p.tentId));
-      let html = tentsData.map(t => renderTentSection(t, t.plants || [])).join('');
+      const renderedIds = new Set();
+      let html = tentsData.map(t => {
+        const plants = (t.plants || []).filter(p => !renderedIds.has(p.id));
+        plants.forEach(p => renderedIds.add(p.id));
+        return renderTentSection(t, plants);
+      }).join('');
+      const orphan = plantsData.filter(p => (!p.tentId || !tentsData.find(t => t.id === p.tentId)) && !renderedIds.has(p.id));
       if (orphan.length) html += renderTentSection(null, orphan);
       return html || `<p class="text-center text-xs text-slate-400 dark:text-slate-500 py-6">Todavía no hay carpas cargadas.</p>`;
     }
