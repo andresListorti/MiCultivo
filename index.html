@@ -1674,28 +1674,6 @@
       document.getElementById('plant-form-notif-options').hidden = !notif.habilitadas;
     }
 
-    // Guardar etapas y notificaciones al editar planta
-    const originalPlantFormSubmit = document.getElementById('plant-form').onsubmit;
-    document.getElementById('plant-form').addEventListener('submit', async (e) => {
-      if (editingPlantId) {
-        const etapas = readEtapasRangesFromForm();
-        const notificaciones = readNotificationsFromForm();
-        if (!document.body.dataset.plantFormPayloadEnriched) {
-          const payload = {
-            nombre: document.getElementById('plant-form-nombre').value.trim(),
-            genetica: document.getElementById('plant-form-genetica').value.trim(),
-            tentId: document.getElementById('plant-form-tent').value || null,
-            fecha: document.getElementById('plant-form-fecha').value,
-            etapa: document.getElementById('plant-form-etapa').value,
-            notas: document.getElementById('plant-form-notas').value.trim(),
-            etapas,
-            notificaciones,
-          };
-          document.body.dataset.enrichedPayload = JSON.stringify(payload);
-          document.body.dataset.plantFormPayloadEnriched = 'true';
-        }
-      }
-    });
 
     // Modal planta: al abrir, cargar etapas y notificaciones guardadas
     const originalOpenPlantModal = openPlantModal;
