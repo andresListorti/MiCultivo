@@ -52,6 +52,20 @@ router.post('/', async (req: AuthedRequest, res) => {
     notas: notas || '',
     creadoEn: now,
     actualizadoEn: now,
+    // Rangos de fechas por etapa (nuevo)
+    etapas: {
+      Enraizado: { desde: null, hasta: null },
+      Vegetativo: { desde: null, hasta: null },
+      Floración: { desde: null, hasta: null },
+      Secado: { desde: null, hasta: null },
+      Curado: { desde: null, hasta: null },
+    },
+    // Notificaciones (nuevo)
+    notificaciones: {
+      habilitadas: false,
+      tiposEventos: ['riego', 'cambioEtapa'],
+      plataformas: ['web'], // web, mobile, desktop
+    },
   };
   const ref = await db.collection('plants').add(doc);
   res.status(201).json({ id: ref.id, ...doc });
@@ -90,7 +104,7 @@ router.put('/:id', async (req: AuthedRequest, res) => {
     res.status(404).json({ error: 'Planta no encontrada' });
     return;
   }
-  const { nombre, genetica, tentId, fecha, etapa, notas } = req.body || {};
+  const { nombre, genetica, tentId, fecha, etapa, notas, etapas, notificaciones } = req.body || {};
   if (etapa && !ETAPAS.includes(etapa)) {
     res.status(400).json({ error: `etapa inválida, debe ser una de: ${ETAPAS.join(', ')}` });
     return;
@@ -100,6 +114,18 @@ router.put('/:id', async (req: AuthedRequest, res) => {
     if (!tentDoc.exists || tentDoc.data()?.ownerId !== req.uid) {
       res.status(400).json({ error: 'La carpa indicada no existe o no te pertenece' });
       return;
+    }
+  }
+  // Validar rangos de fechas por etapa
+  if (etapas) {
+    for (const etapaName of ETAPAS) {
+      const rango = etapas[etapaName];
+      if (rango && rango.desde && rango.hasta) {
+        if (new Date(rango.desde) > new Date(rango.hasta)) {
+          res.status(400).json({ error: `Rango de fechas inválido en etapa ${etapaName}: la fecha "desde" debe ser anterior a "hasta"` });
+          return;
+        }
+      }
     }
   }
   const update: Record<string, unknown> = { actualizadoEn: new Date().toISOString() };
@@ -112,6 +138,8 @@ router.put('/:id', async (req: AuthedRequest, res) => {
     if (etapa !== doc.data()!.etapa) update.etapaDesde = new Date().toISOString().split('T')[0];
   }
   if (notas !== undefined) update.notas = notas;
+  if (etapas !== undefined) update.etapas = etapas;
+  if (notificaciones !== undefined) update.notificaciones = notificaciones;
   await ref.update(update);
   const updated = await ref.get();
   res.json({ id: updated.id, ...updated.data() });

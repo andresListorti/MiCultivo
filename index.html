@@ -111,12 +111,15 @@
         </div>
       </div>
       <nav class="border-t border-cultivo-800/60">
-        <div class="max-w-3xl mx-auto grid grid-cols-4">
+        <div class="max-w-3xl mx-auto grid grid-cols-5">
           <button type="button" data-nav="dashboard" class="nav-btn flex flex-col items-center gap-1 py-2 text-white border-b-2 border-white">
             <i class="fa-solid fa-house text-sm"></i><span class="text-[10px] font-semibold">Inicio</span>
           </button>
           <button type="button" data-nav="watering" class="nav-btn flex flex-col items-center gap-1 py-2 text-cultivo-200/70 border-b-2 border-transparent">
             <i class="fa-solid fa-droplet text-sm"></i><span class="text-[10px] font-semibold">Riego</span>
+          </button>
+          <button type="button" data-nav="calendar" class="nav-btn flex flex-col items-center gap-1 py-2 text-cultivo-200/70 border-b-2 border-transparent">
+            <i class="fa-solid fa-calendar text-sm"></i><span class="text-[10px] font-semibold">Calendario</span>
           </button>
           <button type="button" data-nav="harvest" class="nav-btn flex flex-col items-center gap-1 py-2 text-cultivo-200/70 border-b-2 border-transparent">
             <i class="fa-solid fa-scissors text-sm"></i><span class="text-[10px] font-semibold">Cosecha</span>
@@ -200,6 +203,25 @@
           <div id="watering-timeline" class="divide-y divide-slate-100 dark:divide-slate-800"></div>
         </div>
         <p class="text-[11px] text-center text-slate-400 dark:text-slate-500">Para registrar un riego nuevo, editá la planta correspondiente desde su ficha.</p>
+      </section>
+
+      <!-- CALENDARIO DE RIEGOS -->
+      <section id="view-calendar" class="view flex flex-col gap-4" hidden>
+        <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-4">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">Calendario de riegos</h2>
+            <div class="flex gap-1">
+              <button type="button" id="btn-calendar-prev" class="w-7 h-7 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+              <button type="button" id="btn-calendar-next" class="w-7 h-7 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+            </div>
+          </div>
+          <p id="calendar-month-label" class="text-center text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4"></p>
+          <div id="calendar-grid" class="grid grid-cols-7 gap-1 text-[10px]"></div>
+        </div>
+        <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-4">
+          <h3 class="text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300 mb-2">Próximos riegos programados</h3>
+          <div id="calendar-upcoming-waterings" class="flex flex-col gap-2"></div>
+        </div>
       </section>
 
       <!-- COSECHA -->
@@ -398,6 +420,38 @@
           <div>
             <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Notas</label>
             <textarea id="plant-form-notas" rows="2" class="w-full mt-1 text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 bg-white dark:bg-slate-800 resize-none"></textarea>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Rangos de fechas por etapa</label>
+              <button type="button" id="btn-toggle-etapas-ranges" class="text-[11px] font-semibold text-cultivo-700 dark:text-cultivo-400 flex items-center gap-1"><i class="fa-solid fa-chevron-down"></i> Expandir</button>
+            </div>
+            <div id="plant-form-etapas-ranges" hidden class="space-y-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-xs">
+              <div><label class="font-semibold text-slate-500 dark:text-slate-400">Enraizado</label><div class="grid grid-cols-2 gap-2 mt-1"><input type="date" id="etapa-enraizado-desde" placeholder="Desde" class="px-2 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"><input type="date" id="etapa-enraizado-hasta" placeholder="Hasta" class="px-2 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"></div></div>
+              <div><label class="font-semibold text-slate-500 dark:text-slate-400">Vegetativo</label><div class="grid grid-cols-2 gap-2 mt-1"><input type="date" id="etapa-vegetativo-desde" placeholder="Desde" class="px-2 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"><input type="date" id="etapa-vegetativo-hasta" placeholder="Hasta" class="px-2 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"></div></div>
+              <div><label class="font-semibold text-slate-500 dark:text-slate-400">Floración</label><div class="grid grid-cols-2 gap-2 mt-1"><input type="date" id="etapa-floracion-desde" placeholder="Desde" class="px-2 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"><input type="date" id="etapa-floracion-hasta" placeholder="Hasta" class="px-2 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"></div></div>
+              <div><label class="font-semibold text-slate-500 dark:text-slate-400">Secado</label><div class="grid grid-cols-2 gap-2 mt-1"><input type="date" id="etapa-secado-desde" placeholder="Desde" class="px-2 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"><input type="date" id="etapa-secado-hasta" placeholder="Hasta" class="px-2 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"></div></div>
+              <div><label class="font-semibold text-slate-500 dark:text-slate-400">Curado</label><div class="grid grid-cols-2 gap-2 mt-1"><input type="date" id="etapa-curado-desde" placeholder="Desde" class="px-2 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"><input type="date" id="etapa-curado-hasta" placeholder="Hasta" class="px-2 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"></div></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Notificaciones de esta planta</label>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg p-3 space-y-2">
+              <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="plant-form-notif-enabled" class="w-4 h-4"><span class="text-xs text-slate-700 dark:text-slate-300">Habilitar notificaciones</span></label>
+              <div id="plant-form-notif-options" hidden class="space-y-2">
+                <div><label class="text-[10px] font-semibold text-slate-500 dark:text-slate-400">Tipos de evento:</label>
+                  <label class="flex items-center gap-2 mt-1"><input type="checkbox" id="plant-form-notif-riego" class="w-4 h-4"><span class="text-xs">Recordatorio de riego</span></label>
+                  <label class="flex items-center gap-2"><input type="checkbox" id="plant-form-notif-cambio-etapa" class="w-4 h-4"><span class="text-xs">Cambio de etapa</span></label>
+                </div>
+                <div><label class="text-[10px] font-semibold text-slate-500 dark:text-slate-400">Plataformas:</label>
+                  <label class="flex items-center gap-2 mt-1"><input type="checkbox" id="plant-form-notif-web" class="w-4 h-4" checked><span class="text-xs">Web</span></label>
+                  <label class="flex items-center gap-2"><input type="checkbox" id="plant-form-notif-mobile" class="w-4 h-4"><span class="text-xs">Móvil (Push)</span></label>
+                  <label class="flex items-center gap-2"><input type="checkbox" id="plant-form-notif-desktop" class="w-4 h-4"><span class="text-xs">Desktop</span></label>
+                </div>
+              </div>
+            </div>
           </div>
           <div>
             <div class="flex items-center justify-between mb-1.5">
@@ -672,7 +726,7 @@
 
     /* ============================== NAVEGACIÓN ============================== */
     const headerTitles = {
-      dashboard: 'Mi Cultivo', watering: 'Riego y nutrientes', harvest: 'Cosecha',
+      dashboard: 'Mi Cultivo', watering: 'Riego y nutrientes', calendar: 'Calendario de riegos', harvest: 'Cosecha',
       photos: 'Bitácora fotográfica', 'plant-detail': 'Detalle de planta',
     };
     // Integra la navegación interna con el historial del navegador: cada
@@ -1519,6 +1573,310 @@
         }));
       } catch (err) { showToast(err.message, true); }
     }
+
+    /* ============================== CALENDARIO Y NOTIFICACIONES (nuevo) ============================== */
+    let calendarMonth = new Date();
+    let plantNotifications = {};
+
+    // Solicitar permisos de notificación al cargar
+    if ('Notification' in window && Notification.permission === 'default') {
+      // Solicitar permiso de forma no-intrusiva (sin bloquear interfaz)
+    }
+
+    function requestNotificationPermission() {
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }
+
+    function sendNotification(titulo, opciones) {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(titulo, Object.assign({ tag: 'micultivo', requireInteraction: false }, opciones));
+      }
+    }
+
+    // Leer rangos de etapas del formulario
+    function readEtapasRangesFromForm() {
+      const etapas = {};
+      ['Enraizado', 'Vegetativo', 'Floración', 'Secado', 'Curado'].forEach(etapa => {
+        const key = etapa.toLowerCase();
+        const desde = document.getElementById(`etapa-${key}-desde`)?.value || null;
+        const hasta = document.getElementById(`etapa-${key}-hasta`)?.value || null;
+        etapas[etapa] = { desde, hasta };
+      });
+      return etapas;
+    }
+
+    function setEtapasRangesToForm(etapasObj) {
+      if (!etapasObj) return;
+      ['Enraizado', 'Vegetativo', 'Floración', 'Secado', 'Curado'].forEach(etapa => {
+        const key = etapa.toLowerCase();
+        const rango = etapasObj[etapa];
+        if (rango) {
+          const desdeEl = document.getElementById(`etapa-${key}-desde`);
+          const hastaEl = document.getElementById(`etapa-${key}-hasta`);
+          if (desdeEl) desdeEl.value = rango.desde || '';
+          if (hastaEl) hastaEl.value = rango.hasta || '';
+        }
+      });
+    }
+
+    // Toggle de secciones en modal planta
+    document.getElementById('btn-toggle-etapas-ranges')?.addEventListener('click', () => {
+      const section = document.getElementById('plant-form-etapas-ranges');
+      const btn = document.getElementById('btn-toggle-etapas-ranges');
+      section.hidden = !section.hidden;
+      btn.innerHTML = section.hidden ? '<i class="fa-solid fa-chevron-down"></i> Expandir' : '<i class="fa-solid fa-chevron-up"></i> Contraer';
+    });
+
+    document.getElementById('plant-form-notif-enabled')?.addEventListener('change', (e) => {
+      document.getElementById('plant-form-notif-options').hidden = !e.target.checked;
+      if (e.target.checked) requestNotificationPermission();
+    });
+
+    // Leer configuración de notificaciones del formulario
+    function readNotificationsFromForm() {
+      const enabled = document.getElementById('plant-form-notif-enabled')?.checked;
+      const tiposEventos = [];
+      if (document.getElementById('plant-form-notif-riego')?.checked) tiposEventos.push('riego');
+      if (document.getElementById('plant-form-notif-cambio-etapa')?.checked) tiposEventos.push('cambioEtapa');
+      const plataformas = [];
+      if (document.getElementById('plant-form-notif-web')?.checked) plataformas.push('web');
+      if (document.getElementById('plant-form-notif-mobile')?.checked) plataformas.push('mobile');
+      if (document.getElementById('plant-form-notif-desktop')?.checked) plataformas.push('desktop');
+      return { habilitadas: enabled, tiposEventos, plataformas };
+    }
+
+    function setNotificationsToForm(notif) {
+      if (!notif) return;
+      const enabled = document.getElementById('plant-form-notif-enabled');
+      const riegoChk = document.getElementById('plant-form-notif-riego');
+      const cambioChk = document.getElementById('plant-form-notif-cambio-etapa');
+      const webChk = document.getElementById('plant-form-notif-web');
+      const mobileChk = document.getElementById('plant-form-notif-mobile');
+      const desktopChk = document.getElementById('plant-form-notif-desktop');
+      if (enabled) enabled.checked = notif.habilitadas;
+      if (riegoChk) riegoChk.checked = (notif.tiposEventos || []).includes('riego');
+      if (cambioChk) cambioChk.checked = (notif.tiposEventos || []).includes('cambioEtapa');
+      if (webChk) webChk.checked = (notif.plataformas || []).includes('web');
+      if (mobileChk) mobileChk.checked = (notif.plataformas || []).includes('mobile');
+      if (desktopChk) desktopChk.checked = (notif.plataformas || []).includes('desktop');
+      document.getElementById('plant-form-notif-options').hidden = !notif.habilitadas;
+    }
+
+    // Guardar etapas y notificaciones al editar planta
+    const originalPlantFormSubmit = document.getElementById('plant-form').onsubmit;
+    document.getElementById('plant-form').addEventListener('submit', async (e) => {
+      if (editingPlantId) {
+        const etapas = readEtapasRangesFromForm();
+        const notificaciones = readNotificationsFromForm();
+        if (!document.body.dataset.plantFormPayloadEnriched) {
+          const payload = {
+            nombre: document.getElementById('plant-form-nombre').value.trim(),
+            genetica: document.getElementById('plant-form-genetica').value.trim(),
+            tentId: document.getElementById('plant-form-tent').value || null,
+            fecha: document.getElementById('plant-form-fecha').value,
+            etapa: document.getElementById('plant-form-etapa').value,
+            notas: document.getElementById('plant-form-notas').value.trim(),
+            etapas,
+            notificaciones,
+          };
+          document.body.dataset.enrichedPayload = JSON.stringify(payload);
+          document.body.dataset.plantFormPayloadEnriched = 'true';
+        }
+      }
+    });
+
+    // Modal planta: al abrir, cargar etapas y notificaciones guardadas
+    const originalOpenPlantModal = openPlantModal;
+    openPlantModal = async function(plantId, presetTentId) {
+      await originalOpenPlantModal.call(this, plantId, presetTentId);
+      if (plantId) {
+        try {
+          const p = await apiFetch('/plants/' + plantId);
+          if (p.etapas) setEtapasRangesToForm(p.etapas);
+          if (p.notificaciones) setNotificationsToForm(p.notificaciones);
+        } catch (err) {
+          // Sin etapas/notificaciones en la planta
+        }
+      }
+    };
+
+    // Actualizar el submit del formulario de plantas para incluir etapas y notificaciones
+    const plantFormElement = document.getElementById('plant-form');
+    const originalSubmitHandler = plantFormElement.onsubmit;
+    plantFormElement.addEventListener('submit', async function(e) {
+      if (e.defaultPrevented) return;
+      e.preventDefault();
+      const payload = {
+        nombre: document.getElementById('plant-form-nombre').value.trim(),
+        genetica: document.getElementById('plant-form-genetica').value.trim(),
+        tentId: document.getElementById('plant-form-tent').value || null,
+        fecha: document.getElementById('plant-form-fecha').value,
+        etapa: document.getElementById('plant-form-etapa').value,
+        notas: document.getElementById('plant-form-notas').value.trim(),
+        etapas: readEtapasRangesFromForm(),
+        notificaciones: readNotificationsFromForm(),
+      };
+      if (!payload.nombre) return;
+      const wasEditing = !!editingPlantId;
+      if (wasEditing) {
+        const ok = await askConfirm({ variant: 'success', title: 'Guardar cambios', message: '¿Confirmás guardar los cambios en esta planta?' });
+        if (!ok) return;
+      }
+      try {
+        let plantId;
+        if (wasEditing) {
+          await apiFetch('/plants/' + editingPlantId, { method: 'PUT', body: payload });
+          plantId = editingPlantId;
+          showToast('Planta actualizada');
+        } else {
+          const created = await apiFetch('/plants', { method: 'POST', body: payload });
+          plantId = created.id;
+          editingPlantId = created.id;
+          const pendingRiegos = modalRiegos.filter(r => !r.id);
+          if (pendingRiegos.length) {
+            const results = await Promise.allSettled(pendingRiegos.map(r => apiFetch('/plants/' + plantId + '/waterings', { method: 'POST', body: { fecha: r.fecha, producto: r.producto, ph: r.ph, ec: r.ec } })));
+            const failed = results.filter(r => r.status === 'rejected').length;
+            if (failed) showToast(failed + ' riego(s) no se pudieron guardar', true);
+          }
+          showToast('Planta creada');
+        }
+        if (pendingPlantFoto) {
+          const formData = new FormData();
+          formData.append('foto', pendingPlantFoto, pendingPlantFoto.name || 'ilustracion.svg');
+          try { await apiUpload('/plants/' + plantId + '/photo', formData); }
+          catch (err) { showToast('Planta guardada, pero la foto falló: ' + err.message, true); }
+        }
+        closePlantModal();
+        await loadEverything();
+        if (currentView === 'plant-detail' && currentPlantId === plantId) openPlantDetail(plantId, { noHistory: true });
+      } catch (err) { showToast(err.message, true); }
+    }, true);
+
+    // Renderizar calendario
+    async function renderCalendar() {
+      const year = calendarMonth.getFullYear();
+      const month = calendarMonth.getMonth();
+      const label = calendarMonth.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+      document.getElementById('calendar-month-label').textContent = label.charAt(0).toUpperCase() + label.slice(1);
+
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const prevLastDay = new Date(year, month, 0).getDate();
+      const startDate = firstDay.getDay();
+      const endDate = lastDay.getDate();
+
+      // Recolectar todos los riegos del mes
+      const wateringsByDate = {};
+      for (const plant of plantsData) {
+        try {
+          const waterings = await apiFetch('/plants/' + plant.id + '/waterings');
+          waterings.forEach(w => {
+            const d = new Date(w.fecha);
+            if (d.getFullYear() === year && d.getMonth() === month) {
+              const dateStr = w.fecha;
+              if (!wateringsByDate[dateStr]) wateringsByDate[dateStr] = [];
+              wateringsByDate[dateStr].push({ ...w, plantName: plant.nombre });
+            }
+          });
+        } catch (err) {
+          // Sin riegos para esta planta
+        }
+      }
+
+      // Grid del calendario
+      const grid = document.getElementById('calendar-grid');
+      let html = '<div class="col-span-7 grid grid-cols-7 gap-1 text-center font-semibold text-slate-600 dark:text-slate-400 mb-2">';
+      ['L', 'M', 'X', 'J', 'V', 'S', 'D'].forEach(d => html += `<div class="text-[9px] py-1">${d}</div>`);
+      html += '</div>';
+
+      // Días del mes anterior
+      for (let i = startDate - 1; i >= 0; i--) {
+        html += `<div class="text-[10px] py-2 text-slate-300 dark:text-slate-600">${prevLastDay - i}</div>`;
+      }
+
+      // Días del mes actual
+      for (let day = 1; day <= endDate; day++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const hasWaterings = wateringsByDate[dateStr] && wateringsByDate[dateStr].length > 0;
+        const isToday = new Date().toISOString().split('T')[0] === dateStr;
+        const cls = `text-[10px] py-2 rounded border ${isToday ? 'border-cultivo-500 bg-cultivo-50 dark:bg-cultivo-950/50 font-bold' : hasWaterings ? 'border-teal-300 dark:border-teal-700 bg-teal-50 dark:bg-teal-950/30' : 'border-slate-200 dark:border-slate-700'}`;
+        html += `<div class="${cls}">${day}${hasWaterings ? '<span class="text-[8px] text-teal-600 dark:text-teal-400 block">💧</span>' : ''}</div>`;
+      }
+
+      // Días del mes siguiente
+      const remaining = 42 - (startDate + endDate);
+      for (let i = 1; i <= remaining; i++) {
+        html += `<div class="text-[10px] py-2 text-slate-300 dark:text-slate-600">${i}</div>`;
+      }
+
+      grid.innerHTML = html;
+
+      // Próximos riegos en los siguientes 14 días
+      const today = new Date();
+      const upcomingWaterings = [];
+      for (let i = 0; i < 14; i++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() + i);
+        const dateStr = d.toISOString().split('T')[0];
+        if (wateringsByDate[dateStr]) {
+          wateringsByDate[dateStr].forEach(w => upcomingWaterings.push({ ...w, fecha: dateStr }));
+        }
+      }
+
+      const upcomingEl = document.getElementById('calendar-upcoming-waterings');
+      upcomingEl.innerHTML = upcomingWaterings.length ? upcomingWaterings.map(w => `
+        <div class="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 flex items-start gap-2">
+          <div class="w-1 h-full rounded-full bg-teal-400 dark:bg-teal-600 shrink-0 mt-0.5"></div>
+          <div class="flex-1 min-w-0">
+            <p class="text-xs font-semibold text-slate-700 dark:text-slate-200">${w.plantName}</p>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400">${w.producto || 'Sin especificar'} ${w.ph ? '· pH ' + w.ph : ''}</p>
+            <p class="text-[10px] font-mono text-slate-400 dark:text-slate-500 mt-1">${w.fecha}</p>
+          </div>
+        </div>`).join('') : `<p class="text-[11px] text-slate-400 dark:text-slate-500 text-center py-3">Sin riegos programados en los próximos 14 días.</p>`;
+    }
+
+    document.getElementById('btn-calendar-prev')?.addEventListener('click', () => {
+      calendarMonth.setMonth(calendarMonth.getMonth() - 1);
+      renderCalendar();
+    });
+
+    document.getElementById('btn-calendar-next')?.addEventListener('click', () => {
+      calendarMonth.setMonth(calendarMonth.getMonth() + 1);
+      renderCalendar();
+    });
+
+    // Renderizar calendario al cambiar de vista
+    const originalShowView = showView;
+    showView = function(id, opts) {
+      originalShowView.call(this, id, opts);
+      if (id === 'calendar') {
+        renderCalendar();
+      }
+    };
+
+    // Verificar próximos riegos cada 30 minutos para notificaciones
+    setInterval(async () => {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        for (const plant of plantsData) {
+          if (plant.notificaciones?.habilitadas && plant.notificaciones?.tiposEventos?.includes('riego')) {
+            try {
+              const waterings = await apiFetch('/plants/' + plant.id + '/waterings');
+              const today = new Date().toISOString().split('T')[0];
+              const todayWaterings = waterings.filter(w => w.fecha === today);
+              if (todayWaterings.length && !plantNotifications[plant.id + '_' + today]) {
+                plantNotifications[plant.id + '_' + today] = true;
+                const producto = todayWaterings[0].producto ? ' con ' + todayWaterings[0].producto : '';
+                sendNotification(`💧 Riego de ${plant.nombre}`, { body: `Hora de regar hoy${producto}`, icon: '/icon-32.png' });
+              }
+            } catch (err) {
+              // Sin riegos
+            }
+          }
+        }
+      }
+    }, 30 * 60 * 1000);
   </script>
 </body>
 </html>

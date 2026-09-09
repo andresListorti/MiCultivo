@@ -17,7 +17,39 @@ router.post('/', async (req, res) => {
     res.status(404).json({ error: 'Planta no encontrada' });
     return;
   }
-  const { fecha, cantidad, producto, ph, ec } = req.body || {};
+  const { fecha, cantidad, producto, ph, ec, repeticion } = req.body || {};
+
+  // Si hay repetición configurada, genera múltiples riegos
+  if (repeticion && (repeticion.tipo === 'diaria' || repeticion.tipo === 'interdiaria' || repeticion.tipo === 'semanal' || repeticion.tipo === 'personalizada')) {
+    const { fechaInicio, fechaFin, diasRepeticion } = repeticion;
+    if (!fechaInicio || !fechaFin) {
+      res.status(400).json({ error: 'Se requieren fechaInicio y fechaFin para riegos repetidos' });
+      return;
+    }
+    const start = new Date(fechaInicio);
+    const end = new Date(fechaFin);
+    const interval = repeticion.tipo === 'diaria' ? 1 : repeticion.tipo === 'interdiaria' ? 2 : repeticion.tipo === 'semanal' ? 7 : (diasRepeticion || 1);
+    const riegos = [];
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + interval)) {
+      const docDate = d.toISOString().split('T')[0];
+      const doc = {
+        fecha: docDate,
+        cantidad: cantidad || '',
+        producto: producto || '',
+        ph: ph || '',
+        ec: ec || '',
+        esRepetido: true,
+        repeticionId: repeticion.id || null,
+        creadoEn: new Date().toISOString(),
+      };
+      const ref = await db.collection('plants').doc(plantId).collection('waterings').add(doc);
+      riegos.push({ id: ref.id, ...doc });
+    }
+    res.status(201).json({ creados: riegos.length, riegos });
+    return;
+  }
+
+  // Riego único
   const doc = {
     fecha: fecha || new Date().toISOString().split('T')[0],
     cantidad: cantidad || '',
